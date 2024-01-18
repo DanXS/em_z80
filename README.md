@@ -13,12 +13,11 @@ approach for now.
 
 I've added a mutex around the ram so that should I want to emulate a particular computer based around the z80, for example the ZX Spectrum, then other periferals such as the display can share the same memory on a different thread.
 
-I use large look up tables derived from [link](https://clrhome.org/table/) which lists all the instructions and how by opcode.  The z80 has quite a large set of instructions or variations on a particular instruction so there are multiple tables for instructions encoded with multiple bytes.
+I use large look up tables derived from [https://clrhome.org/table](https://clrhome.org/table/) which lists all the instructions and how by opcode.  The z80 has quite a large set of instructions or variations on a particular instruction so there are multiple tables for instructions encoded with multiple bytes.
 
-This is probably a waste of memory when the instructions could be decoded directly from the bit patterns in the various opcodes, but it makes disassbly easier and allows the table to at least point to the relivant instruction class.  The specifics of the instruction are still decoded by looking at bit patterns describing which registers are used etc.  I followed this document [link][def] as a reference describing the instructions and how each instruction affects the flags.
+This is probably a waste of memory when the instructions could be decoded directly from the bit patterns in the various opcodes, but it makes disassbly easier and allows the table to at least point to the relivant instruction class.  The specifics of the instruction are still decoded by looking at bit patterns describing which registers are used etc.  I followed this document [https://www.zilog.com/docs/z80/um0080.pdf](https://www.zilog.com/docs/z80/um0080.pdf) as a reference describing the instructions and how each instruction affects the flags.
 
 The intention is to keep this part purely for the z80 chip emulation and disassbly without any UI or dependencies an particular framework or operating system.
 
 Later I may want to build UI's for web assembly or native window based applications for various platforms, or perhaps to work on embeded versions.  Therefore I'll probably adopt this part to be a sub-module or library which can be used elsewhere.
 
-[def]: https://www.zilog.com/docs/z80/um0080.pdf
