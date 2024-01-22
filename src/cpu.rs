@@ -380,11 +380,41 @@ impl InstTrait for Instruction {
   }
 
   fn push(&self) {
-    println!("PUSH");
+    if self.code & 0xCF == 0xC5 { 
+      let reg_map = ["BC", "DE", "HL", "SP"];
+      let src = ((self.code & 0x30) >> 4) as usize;
+      let src_reg = reg_map[src];
+      let val = read_reg16(src_reg);
+      let mut addr = read_reg16("SP");
+      if addr == 0x0000 {
+        addr = 0xFFFE;
+      }
+      else {
+        addr = addr - 2;
+      }
+      write_reg16("SP", addr);
+      Memory::write16(addr, val);
+    }
+    // todo: handle ix & iy
   }
 
   fn pop(&self) {
-    println!("POP");
+    if self.code & 0xCF == 0xC1 {
+      let reg_map = ["BC", "DE", "HL", "SP"];
+      let dst = ((self.code & 0x30) >> 4) as usize;
+      let dst_reg = reg_map[dst];
+      let mut addr = read_reg16("SP");
+      let val = Memory::read16(addr);
+      write_reg16(dst_reg, val);
+      if addr == 0xFFFE {
+        addr = 0x0000;
+      }
+      else {
+        addr = addr + 2;
+      }
+      write_reg16("SP", addr);
+    }
+    // todo: handle ix & iy
   }
 
   fn rla(&self) {
