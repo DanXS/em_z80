@@ -471,6 +471,10 @@ pub struct Cpu;
 
 impl Cpu {
 
+  pub fn set_pc(addr: u16) {
+    write_reg16("PC", addr);
+  }
+
   pub fn get_pc() -> u16 {
     read_reg16("PC")
   }

@@ -1,31 +1,22 @@
-mod cpu;
-mod registers;
-mod memory;
-mod opcodes;
 
-use crate::cpu::Cpu;
-use crate::cpu::REG;
-use crate::memory::Memory;
+extern crate em_z80_lib;
+
+use em_z80_lib::*;
 
 fn main() {
-    let rom_file_result = Memory::load_rom("./spectrum48k.rom");
-    println!("Memory:\n{}", Memory);
+    let rom_file_result = load_rom("./roms/spectrum48k.rom");
     match rom_file_result {
         Ok(file) => file,
         Err(error) => panic!("Problem opening the file: {:?}", error),
     };
-    let mut pc = Cpu::get_pc();
-    while u32::from(pc) <= memory::ROM_SIZE {
-        let (text, _) = Cpu::disassemble(pc);
+    println!("Memory:\n{}", get_memory_ref());
+    let mut pc = get_pc();
+    while u32::from(pc) <= get_rom_size() {
+        let (text, _) = disassemble_addr(pc);
         println!("{:04X?}\t{}", pc, text);
-        Cpu::step();
-        pc = Cpu::get_pc();
-        unsafe {
-            println!("Registers:\n{}", REG);
-        }
+        step();
+        pc = get_pc();
+        println!("Registers:\n{}", get_reg_ref());
         println!("---------------------------------------");
     }
-
 }
-
-
