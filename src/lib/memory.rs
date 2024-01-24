@@ -16,20 +16,33 @@ impl fmt::Display for Memory {
 
   fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
     for i in (0..MEM_SIZE-1).step_by(16) {
-      let res = match write!(f, "{:04X?}", i) {
+      match write!(f, "{:04X?}: ", i) {
         Ok(res) => res,
         Err(e) => return Err(e),
       };
-      for j in 0..15 {
+      for j in 0..16 {
         unsafe {
           let byte =  BYTES.lock().unwrap()[(i+j) as usize];
-          let res = match write!(f, " {:02X?}", byte) {
+          match write!(f, "{:02X?} ", byte) {
             Ok(res) => res,
             Err(e) => return Err(e),
           };
         }
       }
-      let res = match write!(f, "\n") {
+      for j in 0..16 {
+        unsafe {
+          let byte =  BYTES.lock().unwrap()[(i+j) as usize];
+          let mut chr = '.';
+          if byte.is_ascii() && !byte.is_ascii_control() {
+            chr = byte as char;
+          };
+          match write!(f, "{}", chr.to_string()) {
+            Ok(res) => res,
+            Err(e) => return Err(e),
+          };
+        }
+      }
+      match write!(f, "\n") {
         Ok(res) => res,
         Err(e) => return Err(e),
       };

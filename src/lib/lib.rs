@@ -45,7 +45,8 @@ pub fn get_memory_ref() -> &'static Memory {
 // Dissassmble a given address, returns the dissabled string and the number of bytes
 // used to encode the instruction
 pub fn disassemble_addr(addr: u16) -> (String, u8) {
-  Cpu::disassemble(addr)
+  let result = Cpu::disassemble(addr);
+  return result;
 }
 
 // Step a single instruction at the current address given by the program counter
@@ -55,6 +56,15 @@ pub fn step() {
 
 // Get a reference to the registers
 pub fn get_reg_ref() -> &'static Register {
-  let reg = unsafe {&REG};
-  return reg
+  unsafe {&REG}
+}
+
+// Get a string representing entire memory view
+pub fn get_memory_view_string() -> String {
+  Memory.to_string()
+}
+
+// Get a string representing registers
+pub fn get_register_view_string() -> String {
+  unsafe {REG.to_string()}
 }

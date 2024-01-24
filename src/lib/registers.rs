@@ -76,24 +76,24 @@ impl fmt::Display for Register {
       // operation succeeded or failed. Note that `write!` uses syntax which
       // is very similar to `println!`.
       write!(f, 
-        "AF:\t{:04X?}\n\
-        BC:\t{:04X?}\n\
-        DE:\t{:04X?}\n\
-        HL:\t{:04X?}\n\
-        AF':\t{:04X?}\n\
-        BC':\t{:04X?}\n\
-        DE':\t{:04X?}\n\
-        HL':\t{:04X?}\n\
-        IX:\t{:04X?}\n\
-        IY:\t{:04X?}\n\
-        SP:\t{:04X?}\n\
-        PC:\t{:04X?}\n\
-        IR:\t{:04X?}\n\
-        WZ:\t{:04X?}\n",
-        self.af, self.bc, 
-        self.de, self.hl,
-        self.af_p, self.bc_p,
-        self.de_p, self.hl_p,
+        "AF: {:04X?}  \
+        AF': {:04X?}\n\
+        BC: {:04X?}  \
+        BC': {:04X?}\n\
+        DE: {:04X?}  \
+        DE': {:04X?}\n\
+        HL: {:04X?}  \
+        HL': {:04X?}\n\
+        IX: {:04X?}   \
+        IY: {:04X?}\n\
+        SP: {:04X?}   \
+        PC: {:04X?}\n\
+        IR: {:04X?}   \
+        WZ: {:04X?}\n",
+        self.af, self.af_p, 
+        self.bc, self.bc_p,
+        self.de, self.de_p,
+        self.hl, self.hl_p,
         self.ix, self.iy,
         self.sp, self.pc,
         self.ir, self.wz)
