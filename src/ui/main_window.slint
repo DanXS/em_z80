@@ -6,7 +6,6 @@ import "../../fonts/liberation-mono/LiberationMono-Bold.ttf";
 component DisplayView inherits Rectangle {
     width: 62.5%;
     height: self.width * (9.0/16.0);
-    background: #CCCCCC;
 }
 
 component MemoryView inherits Rectangle {
@@ -16,12 +15,11 @@ component MemoryView inherits Rectangle {
     callback scroll_to_addr(string);
     width: 62.5%;
     vertical-stretch: 1;
-    background: #6666aa;
+    background: #323232;
     VerticalLayout {
         padding: 2px;
         HorizontalBox {
             Text {
-                color: #eeeeee;
                 font-size: 11pt;
                 font-weight: 700;
                 text: "Memory";
@@ -51,7 +49,7 @@ component MemoryView inherits Rectangle {
             }
         }
         Rectangle {
-            background: #eeeeee;
+            background: #1C1C1C;
             width: 100%;
             vertical-stretch: 1;
             i-memory-list := ListView {
@@ -62,7 +60,6 @@ component MemoryView inherits Rectangle {
                     Text {
                         x: 0;
                         text: txt;
-                        color: #000000;
                         font-weight: 500;
                         font-size: 11pt;
                     }
@@ -79,12 +76,11 @@ component RegisterView inherits Rectangle {
     out property <string> val_str;
     width: 37.5%;
     height: 50%;
-    background: #6666aa;
+    background: #323232;
     VerticalLayout {
         padding:2px;
         HorizontalBox {
             Text {
-                color: #eeeeee;
                 font-size: 11pt;
                 font-weight: 700;
                 text: "Registers";
@@ -119,7 +115,7 @@ component RegisterView inherits Rectangle {
             }
         }
         Rectangle {
-            background: #eeeeee;
+            background: #1C1C1C;
             width: 100%;
             vertical-stretch: 1;
             ListView {
@@ -131,7 +127,6 @@ component RegisterView inherits Rectangle {
                     Text {
                         x: 0;
                         text: txt;
-                        color: #000000;
                         font-weight: 500;
                         font-size: 11pt;
                     }
@@ -147,12 +142,11 @@ component DisassemblyView inherits Rectangle {
     callback step;
     callback start_stop;
     width: 37.5%;
-    background: #6666aa;
+    background: #323232;
     VerticalLayout {
         padding:2px;
         HorizontalBox {
             Text {
-                color: #eeeeee;
                 font-size: 11pt;
                 font-weight: 700;
                 text: "Disassembly";
@@ -174,7 +168,7 @@ component DisassemblyView inherits Rectangle {
             }
         }
         Rectangle {
-            background: #eeeeee;
+            background: #1C1C1C;
             width: 100%;
             vertical-stretch: 1;
             ListView {
@@ -182,12 +176,11 @@ component DisassemblyView inherits Rectangle {
                 for txt in data
                 : Rectangle {
                     height: 30px;
-                    background: {(txt == data[0]) ? #ffAA88 : #eeeeee};
+                    background: {(txt == data[0]) ? #ff9E37 : #1C1C1C};
                     width: parent.width;
                     Text {
                         x: 0;
                         text: txt;
-                        color: #000000;
                         font-weight: 500;
                         font-size: 11pt;
                     }

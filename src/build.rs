@@ -1,6 +1,6 @@
 fn main() {
   let config =
     slint_build::CompilerConfiguration::new()
-    .with_style("fluent-light".into());
+    .with_style("fluent-dark".into());
   slint_build::compile_with_config("./src/ui/main_window.slint", config).unwrap();
 }
