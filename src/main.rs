@@ -5,14 +5,14 @@ use em_z80_lib::*;
 
 use std::u16;
 use std::rc::Rc;
-use slint::{SharedString, ModelRc, VecModel};
+use slint::{ SharedString, ModelRc, VecModel };
 
 slint::slint! {
 
     import { Button, ListView, HorizontalBox, ScrollView, LineEdit, ComboBox } from "std-widgets.slint";
     import "./fonts/liberation-mono/LiberationMono-Regular.ttf";
     import "./fonts/liberation-mono/LiberationMono-Bold.ttf";
-    
+
     component DisplayView inherits Rectangle {
         width: 62.5%;
         height: self.width * (9.0/16.0);
@@ -21,6 +21,9 @@ slint::slint! {
 
     component MemoryView inherits Rectangle {
         in property <[string]> data;
+        out property <string> addr_str;
+        in property <int> scroll_row;
+        callback scroll_to_addr(string);
         width: 62.5%;
         vertical-stretch: 1;
         background: #6666aa;
@@ -33,12 +36,33 @@ slint::slint! {
                     font-weight: 700;
                     text: "Memory";
                 }
+                LineEdit {
+                    width: 60px;
+                    placeholder-text: "HEX";
+                    edited(val) => {
+                        root.addr_str = val;
+                    }
+                    accepted(val) => {
+                        root.addr_str = val;
+                        root.scroll_to_addr(root.addr_str);
+                        i-memory-list.viewport-y = -(root.scroll_row)*30px;
+                    }
+                }
+                Button {
+                    width: 60px;
+                    text: "Goto";
+                    enabled: { (root.addr_str != "") };
+                    clicked => {
+                        root.scroll_to_addr(root.addr_str);
+                        i-memory-list.viewport-y = -(root.scroll_row)*30px;
+                    }
+                }
             }
             Rectangle {
                 background: #eeeeee;
                 width: 100%;
                 vertical-stretch: 1;
-                ListView {
+                i-memory-list := ListView {
                     for txt in data
                     : Rectangle {
                         height: 30px;
@@ -96,7 +120,7 @@ slint::slint! {
                 Button {
                     width: 60px;
                     text: "Set";
-                    enabled: { (root.reg_str != "") };
+                    enabled: { (root.reg_str != "") && (root.val_str != "") };
                     clicked => {
                         root.set_register(root.reg_str, root.val_str);
                     }
@@ -142,6 +166,7 @@ slint::slint! {
                     text: "Disassembly";
                 }
                 Button {
+                    width: 60px;
                     text : "Step";
                     enabled: !is_running; 
                     clicked => {
@@ -149,6 +174,7 @@ slint::slint! {
                     }
                 }
                 Button {
+                    width: 60px;
                     text: is_running ? "Stop" : "Run";
                     clicked => {
                         root.start_stop();
@@ -184,9 +210,11 @@ slint::slint! {
         in property <[string]> register_view_data;
         in property <[string]> disassembly_view_data;
         in-out property <bool> is_running;
+        in property <int> memory_scroll_row;
         callback step;
         callback start_stop;
         callback set_register(string, string);
+        callback memory_scroll_to_addr(string);
         default-font-family: "Liberation Mono";
         preferred-width: 1024px;
         min-width: 640px;
@@ -198,6 +226,10 @@ slint::slint! {
                 DisplayView {}
                 MemoryView  {
                     data: memory_view_data;
+                    scroll_row: memory_scroll_row;
+                    scroll_to_addr(addr) => {
+                        root.memory_scroll_to_addr(addr);
+                    }
                 }
             }
             VerticalLayout {
@@ -270,7 +302,19 @@ fn main() {
             Err(e) => println!("{}", e),
         };
     });
+    let weak_window = main_window.as_weak();
+    main_window.on_memory_scroll_to_addr(move |val: SharedString| {
+        let val_str = val.as_str();
+        match u16::from_str_radix(val_str, 16) {
+            Ok(res) => {
+                let row = res >> 4;
+                (weak_window.unwrap()).set_memory_scroll_row(row as i32);
+            },
+            Err(e) => println!("{}", e),
+        };
+    });
     main_window.run().unwrap();
+    
 }
 
 fn build_memory_view(main_window: &MainWindow) {
