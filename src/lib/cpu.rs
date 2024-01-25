@@ -60,13 +60,26 @@ fn clear_flag(flag: Flag) {
   }
 }
 
+fn report_unknown(opcode_str: &str) {
+  println!("Unknown {} instruction!", opcode_str);
+}
+
 pub trait InstTrait {
   fn nop(&self);
   fn ld(&self);
+  fn ex(&self);
+  fn exx(&self);
   fn inc(&self);
   fn dec(&self);
   fn push(&self);
   fn pop(&self);
+  fn add(&self);
+  fn adc(&self);
+  fn sub(&self);
+  fn sbc(&self);
+  fn and(&self);
+  fn or(&self);
+  fn xor(&self);
   fn rla(&self);
   fn rra(&self);
   fn rlca(&self);
@@ -94,15 +107,15 @@ impl InstTrait for Instruction {
 
   // NOP instruction
   fn nop(&self) {
-    println!("NOP");
+    if self.code != 0x00 {
+      report_unknown("NOP");
+    }
   }
 
   // LD instruction
   fn ld(&self) {
     // ToDo: LD for IX & IY
     // Do actual instructions and set flags etc.
-    println!("LD");
-    println!("{:02X?} {:04X?} {} {}", self.code, self.data, self.len, self.table);
     if self.table == "main" || self.table == "misc" {
       if self.len == 0 {
         let reg_map = ["B", "C", "D", "E", "H", "L", "(HL)", "A"];
@@ -160,7 +173,7 @@ impl InstTrait for Instruction {
           write_reg16("SP", hl);
         }
         else {
-          println!("Unkown LD instruction");
+          report_unknown("LD");
         }
       }
       else if self.len == 1 {
@@ -173,7 +186,7 @@ impl InstTrait for Instruction {
           write_reg8(dst_reg, val);
         }
         else {
-          println!("Unkown LD instruction");
+          report_unknown("LD");
         }
       }
       else if self.len == 2 {
@@ -226,28 +239,85 @@ impl InstTrait for Instruction {
           write_reg8("A", val);
         }
         else {
-          println!("Unkown LD instruction");
+          report_unknown("LD");
         }
       }
     }
     else {
       // Todo: add IX and IY instructions here
-      println!("Unkown LD instruction");
+      report_unknown("LD");
+    }
+  }
+
+  fn ex(&self) {
+    if self.table == "main" {
+      if self.code == 0xEB {
+        // EX DE, HL
+        let de = read_reg16("DE");
+        let hl = read_reg16("HL");
+        write_reg16("HL", de);
+        write_reg16("DE", hl);
+      }
+      else if self.code == 0x08 {
+        // EX AF, AF'
+        let af = read_reg16("AF");
+        let af_p = read_reg16("AF'");
+        write_reg16("AF'", af);
+        write_reg16("AF", af_p);
+      }
+      else if self.code == 0xE3 {
+        // EX (SP), HL
+        let sp = read_reg16("SP");
+        let hl = read_reg16("HL");
+        let data = Memory::read16(sp);
+        write_reg16("HL", data);
+        Memory::write16(sp, hl);
+      }
+      else {
+        // ToDo: IX and IY
+        report_unknown("EX");
+      }
+    }
+    else {
+      report_unknown("EX");
+    }
+  }
+
+  fn exx(&self) {
+    if self.table == "main" {
+      if self.code == 0xD9 {
+        // EXX
+        let bc = read_reg16("BC");
+        let de = read_reg16("DE");
+        let hl = read_reg16("HL");
+        let bc_p = read_reg16("BC'");
+        let de_p = read_reg16("DE'");
+        let hl_p = read_reg16("HL'");
+        write_reg16("BC", bc_p);
+        write_reg16("DE", de_p);
+        write_reg16("HL", hl_p);
+        write_reg16("BC'", bc);
+        write_reg16("DE'", de);
+        write_reg16("HL'", hl);
+      }
+      else {
+        report_unknown("EXX");
+      }
+    }
+    else {
+      report_unknown("EXX");
     }
   }
 
   // INC instruction
   #[allow(unused_assignments)]
   fn inc(&self) {
-    // ToDo: Do actual instructions and set flags etc.
-    println!("INC");
-    println!("{:02X?} {:04X?} {} {}", self.code, self.data, self.len, self.table);
+    // ToDo: IX and IY
     if self.code & 0xC7 == 0x04 {
       // INC r
       let reg_map = ["B", "C", "D", "E", "H", "L", "(HL)", "A"];
       let dst = ((self.code & 0x38) >> 3) as usize;
       let reg = reg_map[dst];
-      println!("INC REG {}", reg);
       let mut addr : u16 = 0x0000;
       let mut val : u8 = 0x00;
       if reg == "(HL)" {
@@ -303,14 +373,15 @@ impl InstTrait for Instruction {
         write_reg16(reg, val + 1);
       }
     }
+    else {
+      report_unknown("INC");
+    }
   }
 
   // DEC instruction
   #[allow(unused_assignments)]
   fn dec(&self) {
-    // ToDo: Do actual instructions and set flags etc.
-    println!("DEC");
-    println!("{:02X?} {:04X?} {} {}", self.code, self.data, self.len, self.table);
+    // ToDo: IX and IY
     if self.code & 0xC7 == 0x05 {
       // DEC r
       let reg_map = ["B", "C", "D", "E", "H", "L", "(HL)", "A"];
@@ -377,6 +448,9 @@ impl InstTrait for Instruction {
         write_reg16(reg, val - 1);
       }
     }
+    else {
+      report_unknown("DEC");
+    }
   }
 
   fn push(&self) {
@@ -396,6 +470,9 @@ impl InstTrait for Instruction {
       Memory::write16(addr, val);
     }
     // todo: handle ix & iy
+    else {
+      report_unknown("PUSH");
+    }
   }
 
   fn pop(&self) {
@@ -415,54 +492,85 @@ impl InstTrait for Instruction {
       write_reg16("SP", addr);
     }
     // todo: handle ix & iy
+    else {
+      report_unknown("POP");
+    }
+  }
+
+  fn add(&self) {
+    report_unknown("ADD");
+  }
+
+  fn adc(&self) {
+    report_unknown("ADC");
+  }
+
+  fn sub(&self) {
+    report_unknown("SUB");
+  }
+
+  fn sbc(&self) {
+    report_unknown("SBC");
+  }
+
+  fn and(&self) {
+   report_unknown("AND");
+  }
+
+  fn or(&self) {
+   report_unknown("OR");
+  }
+
+  fn xor(&self) {
+   report_unknown("XOR");
   }
 
   fn rla(&self) {
-    println!("RLA");
+   report_unknown("RLA");
   }
 
   fn rra(&self) {
-    println!("RRA");
+   report_unknown("RRA");
   }
 
   fn rlca(&self) {
-    println!("RLCA");
+   report_unknown("RLCA");
   }
 
   fn rrca(&self) {
-    println!("RRCA");
+   report_unknown("RRCA");
   }
 
   fn rrc(&self) {
-    println!("RRC");
+   report_unknown("RRC");
   }
 
   fn rlc(&self) {
-    println!("RLC");
+   report_unknown("RLC");
   }
 
   fn rr(&self) {
-    println!("RR");
+   report_unknown("RR");
   }
 
   fn rl(&self) {
-    println!("RL");
+   report_unknown("RL");
   }
 
   fn sla(&self) {
-    println!("SLA");
+   report_unknown("SLA");
   }
 
   fn sra(&self) {
-    println!("SRA");
+   report_unknown("SRA");
   }
 
   fn sll(&self) {
-    println!("SLL");
+   report_unknown("SLL");
   }
 
   fn srl(&self) {
-    println!("SRL");
+   report_unknown("SRL");
   }
 
 }
@@ -477,6 +585,14 @@ impl Cpu {
 
   pub fn get_pc() -> u16 {
     read_reg16("PC")
+  }
+
+  pub fn set_register16(reg: &str, addr: u16) {
+    write_reg16(reg, addr);
+  }
+
+  pub fn get_register16(reg: &str) -> u16 {
+    read_reg16(reg)
   }
 
   pub fn disassemble(addr: u16) -> (String, u8) {
@@ -505,7 +621,7 @@ impl Cpu {
 
   pub fn step() {
     let (opcode, data, n) = Self::fetch(Self::get_pc());
-    write_reg16("PC", Self::get_pc() + (opcode.byte_count as u16));
+    write_reg16("PC", (((Self::get_pc() as u32) + (opcode.byte_count as u32)) & 0xFFFF) as u16);
     Self::run_inst(opcode.func, opcode, data, n, opcode.table, opcode.cycles);
   }
 
@@ -522,25 +638,25 @@ impl Cpu {
   {
       let code = Memory::read8(address);
       let mut opcode = &opcodes::MAIN_OPCODES[code as usize];
-      address = address + 1;
+      address = (((address  as u32) + 1) & 0xFFFF) as u16;
       let mut inst_len : usize = 1;
       if opcode.instruction == "MISC" {
         let code = Memory::read8(address);
         opcode = &opcodes::MISC_OPCODES[code as usize];
-        address = address + 1;
+        address = (((address  as u32) + 1) & 0xFFFF) as u16;
         inst_len = 2;
       }
       else if opcode.instruction == "BIT" {
         let code = Memory::read8(address);
         opcode = &opcodes::BIT_OPCODES[code as usize];
-        address = address + 1;
+        address = (((address  as u32) + 1) & 0xFFFF) as u16;
         inst_len = 2;
       }
       let mut data: [u8;2] = [0,0];
       let n = (opcode.byte_count as usize) - inst_len;
       for i in 0..n {
         data[i] = Memory::read8(address);
-        address = address + 1;
+        address = (((address  as u32) + 1) & 0xFFFF) as u16;
       }
       (opcode, data, n)
   }

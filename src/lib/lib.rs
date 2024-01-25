@@ -32,6 +32,16 @@ pub fn get_pc() -> u16 {
   Cpu::get_pc()
 }
 
+// Set a register to a specified value
+pub fn set_register16(reg: &str, val: u16) {
+  Cpu::set_register16(reg, val);
+}
+
+// Get a register value
+pub fn get_register16(reg: &str) -> u16 {
+  Cpu::get_register16(reg)
+}
+
 // Load a rom image file into the rom area of memory
 pub fn load_rom(filename: &str) -> io::Result<()> {
   Memory::load_rom(filename)
@@ -68,3 +78,4 @@ pub fn get_memory_view_string() -> String {
 pub fn get_register_view_string() -> String {
   unsafe {REG.to_string()}
 }
+
