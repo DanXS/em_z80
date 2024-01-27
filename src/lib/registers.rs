@@ -211,5 +211,11 @@ impl Register {
     f_reg = f_reg & !bit_mask_for_flag(flag);
     self.af = (self.af & 0xFF00) | (f_reg as u16);
   }
+
+  pub fn is_flag_set(&mut self, flag: Flag) -> bool {
+    let f_reg = (self.af & 0xFF) as u8;
+    f_reg & bit_mask_for_flag(flag) != 0x00
+  }
+  
 }
 

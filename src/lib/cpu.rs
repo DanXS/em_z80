@@ -60,6 +60,12 @@ fn clear_flag(flag: Flag) {
   }
 }
 
+fn is_flag_set(flag: Flag) -> bool {
+  unsafe {
+    REG.is_flag_set(flag)
+  }
+}
+
 fn report_unknown(opcode_str: &str) {
   println!("Unknown {} instruction!", opcode_str);
 }
@@ -109,7 +115,6 @@ pub trait InstTrait {
   fn bit(&self);
   fn res(&self);
   fn set(&self);
-  fn tstio(&self);
   fn jp(&self);
   fn jr(&self);
   fn call(&self);
@@ -145,6 +150,7 @@ pub trait InstTrait {
   fn in0(&self);
   fn out0(&self);
   fn tst(&self);
+  fn tstio(&self);
   fn slp(&self);
   fn otim(&self);
   fn otdm(&self);
@@ -673,12 +679,63 @@ impl InstTrait for Instruction {
     report_unknown("SET");
   }
 
-  fn tstio(&self) {
-    report_unknown("TSTIO");
-  }
-
   fn jp(&self) {
-    report_unknown("JP");
+    if self.table == "main" {
+      if self.code == 0xC3 {
+        // JP nn
+        let dst_addr = self.data;
+        write_reg16("PC", dst_addr);
+      }
+      else if self.code == 0xE9 {
+        // JP (HL)
+        let hl = read_reg16("HL");
+        let dst_addr = Memory::read16(hl);
+        write_reg16("PC", dst_addr);
+      }
+      else if self.code & 0xC7 == 0xC2 {
+        // JP cc,nn
+        let dst_addr = self.data;
+        let cc = (self.code & 0x38) >> 3;
+        let cc_map = ["NZ", "Z", "NC", "C", "PO", "PE", "P", "M"];
+        let cc_str = cc_map[cc as usize];
+        let should_jump = match cc_str {
+          "NZ" => { !is_flag_set(Flag::Z) },
+          "Z" => { is_flag_set(Flag::Z) },
+          "NC" => { !is_flag_set(Flag::C) },
+          "C" => { !is_flag_set(Flag::C) },
+          "PO" => { is_flag_set(Flag::PV) },
+          "PE" => { !is_flag_set(Flag::PV) },
+          "P" => { is_flag_set(Flag::S) },
+          "M" => { !is_flag_set(Flag::S) },
+          _ => { 
+            println!("Unknown condition code for JP instruction!");
+            false
+         }
+        };
+        if should_jump {
+          write_reg16("PC", dst_addr);
+        }
+      }
+      else if self.table == "ix" {
+        if self.code == 0xE9 {
+          // JP (IX)
+          let hl = read_reg16("IX");
+          let dst_addr = Memory::read16(hl);
+          write_reg16("PC", dst_addr);
+        }
+      }
+      else if self.table == "iy" {
+        if self.code == 0xE9 {
+          // JP (IY)
+          let hl = read_reg16("IY");
+          let dst_addr = Memory::read16(hl);
+          write_reg16("PC", dst_addr);
+        }
+      }
+    }
+    else {
+      report_unknown("JP");
+    }
   }
 
   fn jr(&self) {
@@ -823,6 +880,10 @@ impl InstTrait for Instruction {
 
   fn tst(&self) {
     report_not_supported("TST");
+  }
+
+  fn tstio(&self) {
+    report_not_supported("TSTIO");
   }
 
   fn slp(&self) {
