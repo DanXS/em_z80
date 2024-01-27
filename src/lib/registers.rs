@@ -71,10 +71,6 @@ impl Default for Register {
 
 impl fmt::Display for Register {
   fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-      // Write strictly the first element into the supplied output
-      // stream: `f`. Returns `fmt::Result` which indicates whether the
-      // operation succeeded or failed. Note that `write!` uses syntax which
-      // is very similar to `println!`.
       write!(f, 
         "AF: {:04X?}  \
         AF': {:04X?}\n\
@@ -122,6 +118,10 @@ impl Register {
       "L'" => ((self.hl_p & 0xFF)) as u8,
       "I" => ((self.ir & 0xFF00) >> 8) as u8,
       "R'" => ((self.ir & 0xFF)) as u8,
+      "IXH" => ((self.ix & 0xFF00) >> 8) as u8,
+      "IXL" => ((self.ix & 0xFF)) as u8,
+      "IYH" => ((self.iy & 0xFF00) >> 8) as u8,
+      "IYL" => ((self.iy & 0xFF)) as u8,
       _ => {
         println!("Can't read to register {}", reg_str);
         0x00
@@ -172,6 +172,10 @@ impl Register {
       "L'" => { self.hl_p = (self.hl_p & 0xFF00) | ((val as u16) & 0x00FF); },
       "I" => { self.ir = (self.ir & 0x00FF) | (((val as u16) << 8) & 0xFF00); },
       "R" => { self.ir = (self.ir & 0xFF00) | ((val as u16) & 0x00FF); },
+      "IXH" => { self.ix = (self.ix & 0x00FF) | (((val as u16) << 8) & 0xFF00); },
+      "IXL" => { self.ix = (self.ix & 0xFF00) | ((val as u16) & 0x00FF); },
+      "IYH" => { self.iy = (self.iy & 0x00FF) | (((val as u16) << 8) & 0xFF00); },
+      "IYL" => { self.iy = (self.iy & 0xFF00) | ((val as u16) & 0x00FF); },
       _ => println!("Can't write to register {}", reg_str)
     }
   }

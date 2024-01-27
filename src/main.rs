@@ -93,7 +93,7 @@ fn build_register_view(main_window: &MainWindow) {
 fn build_disassembly_view(main_window: &MainWindow) {
     let mut addr = get_pc();
     let mut str_vec : Vec<String> = Vec::new();
-    for _ in 0..20 {
+    for _ in 0..100 {
         let (text, bytes) = disassemble_addr(addr);
         str_vec.push(format!("{:04X?}:    {}", addr, text));
         if addr as u32 == get_mem_size()-1 {
