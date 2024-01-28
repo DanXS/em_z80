@@ -254,6 +254,7 @@ impl InstTrait for Instruction {
       }
     }
     else if self.table == "misc" {
+      println!("LD MISC code = {} len = {}",  self.code, self.len);
       if self.len == 0 {
         if self.code == 0x47 {
           // LD I,A
@@ -268,7 +269,7 @@ impl InstTrait for Instruction {
           clear_flag(Flag::N);
           // ToDo: set status flags based on interrupt flags
         }
-        if self.code == 0x4F {
+        else if self.code == 0x4F {
           // LD R,A
           let val = read_reg8("A");
           write_reg8("R", val);
