@@ -1,5 +1,5 @@
-use crate::cpu::Instruction;
-use crate::cpu::InstTrait;
+use crate::instructions::InstTrait;
+use crate::instructions::Instruction;
 
 pub struct Opcode<'a> {
   pub code: u8,
@@ -266,7 +266,7 @@ pub static MAIN_OPCODES: [Opcode; 256] =
   Opcode{code: 0xFB, cycles: (4,4),   byte_count: 1, table: "main", instruction: "EI", func: Instruction::ei},
   Opcode{code: 0xFC, cycles: (17,10), byte_count: 3, table: "main", instruction: "CALL M,nn", func: Instruction::call},
   Opcode{code: 0xFD, cycles: (0,0),   byte_count: 1, table: "main", instruction: "IY", func: Instruction::nop},
-  Opcode{code: 0xFE, cycles: (7,7),   byte_count: 1, table: "main", instruction: "CP n", func: Instruction::cp},
+  Opcode{code: 0xFE, cycles: (7,7),   byte_count: 2, table: "main", instruction: "CP n", func: Instruction::cp},
   Opcode{code: 0xFF, cycles: (11,11), byte_count: 1, table: "main", instruction: "RST 38H", func: Instruction::rst}
 ];
 
@@ -798,7 +798,7 @@ pub static IX_OPCODES: [Opcode; 256] =
   Opcode{code: 0x03, cycles: (0,0),   byte_count: 2, table: "ix", instruction: "UNKNOWN", func: Instruction::nop},
   Opcode{code: 0x04, cycles: (8,8),   byte_count: 2, table: "ix", instruction: "INC B", func: Instruction::inc},
   Opcode{code: 0x05, cycles: (8,8),   byte_count: 2, table: "ix", instruction: "DEC B", func: Instruction::dec},
-  Opcode{code: 0x06, cycles: (11,11), byte_count: 3, table: "ix", instruction: "LD B,n", func: Instruction::nop},
+  Opcode{code: 0x06, cycles: (11,11), byte_count: 3, table: "ix", instruction: "LD B,n", func: Instruction::ld},
   Opcode{code: 0x07, cycles: (0,0),   byte_count: 2, table: "ix", instruction: "UNKNOWN", func: Instruction::nop},
   Opcode{code: 0x08, cycles: (0,0),   byte_count: 2, table: "ix", instruction: "UNKNOWN", func: Instruction::nop},
   Opcode{code: 0x09, cycles: (15,15), byte_count: 2, table: "ix", instruction: "ADD IX,BC", func: Instruction::add},
@@ -814,7 +814,7 @@ pub static IX_OPCODES: [Opcode; 256] =
   Opcode{code: 0x13, cycles: (0,0),   byte_count: 2, table: "ix", instruction: "UNKNOWN", func: Instruction::nop},
   Opcode{code: 0x14, cycles: (8,8),   byte_count: 2, table: "ix", instruction: "INC D", func: Instruction::inc},
   Opcode{code: 0x15, cycles: (8,8),   byte_count: 2, table: "ix", instruction: "DEC D", func: Instruction::dec},
-  Opcode{code: 0x16, cycles: (11,11), byte_count: 3, table: "ix", instruction: "LD D,n", func: Instruction::nop},
+  Opcode{code: 0x16, cycles: (11,11), byte_count: 3, table: "ix", instruction: "LD D,n", func: Instruction::ld},
   Opcode{code: 0x17, cycles: (0,0),   byte_count: 2, table: "ix", instruction: "UNKNOWN", func: Instruction::nop},
   Opcode{code: 0x18, cycles: (0,0),   byte_count: 2, table: "ix", instruction: "UNKNOWN", func: Instruction::nop},
   Opcode{code: 0x19, cycles: (15,15), byte_count: 2, table: "ix", instruction: "ADD IX,DE", func: Instruction::add},
@@ -1017,11 +1017,11 @@ pub static IX_OPCODES: [Opcode; 256] =
   Opcode{code: 0xDE, cycles: (0,0),   byte_count: 2, table: "ix", instruction: "UNKNOWN", func: Instruction::nop},
   Opcode{code: 0xDF, cycles: (0,0),   byte_count: 2, table: "ix", instruction: "UNKNOWN", func: Instruction::nop},
   Opcode{code: 0xE0, cycles: (0,0),   byte_count: 2, table: "ix", instruction: "UNKNOWN", func: Instruction::nop},
-  Opcode{code: 0xE1, cycles: (14,14),   byte_count: 2, table: "ix", instruction: "POP IX", func: Instruction::pop},
+  Opcode{code: 0xE1, cycles: (14,14), byte_count: 2, table: "ix", instruction: "POP IX", func: Instruction::pop},
   Opcode{code: 0xE2, cycles: (0,0),   byte_count: 2, table: "ix", instruction: "UNKNOWN", func: Instruction::nop},
-  Opcode{code: 0xE3, cycles: (23,23),   byte_count: 2, table: "ix", instruction: "EX (SP),IX", func: Instruction::ex},
+  Opcode{code: 0xE3, cycles: (23,23), byte_count: 2, table: "ix", instruction: "EX (SP),IX", func: Instruction::ex},
   Opcode{code: 0xE4, cycles: (0,0),   byte_count: 2, table: "ix", instruction: "UNKNOWN", func: Instruction::nop},
-  Opcode{code: 0xE5, cycles: (15,15),   byte_count: 2, table: "ix", instruction: "PUSH IX", func: Instruction::push},
+  Opcode{code: 0xE5, cycles: (15,15), byte_count: 2, table: "ix", instruction: "PUSH IX", func: Instruction::push},
   Opcode{code: 0xE6, cycles: (0,0),   byte_count: 2, table: "ix", instruction: "UNKNOWN", func: Instruction::nop},
   Opcode{code: 0xE7, cycles: (0,0),   byte_count: 2, table: "ix", instruction: "UNKNOWN", func: Instruction::nop},
   Opcode{code: 0xE8, cycles: (0,0),   byte_count: 2, table: "ix", instruction: "UNKNOWN", func: Instruction::nop},
@@ -1058,7 +1058,7 @@ pub static IY_OPCODES: [Opcode; 256] =
   Opcode{code: 0x03, cycles: (0,0),   byte_count: 2, table: "iy", instruction: "UNKNOWN", func: Instruction::nop},
   Opcode{code: 0x04, cycles: (8,8),   byte_count: 2, table: "iy", instruction: "INC B", func: Instruction::inc},
   Opcode{code: 0x05, cycles: (8,8),   byte_count: 2, table: "iy", instruction: "DEC B", func: Instruction::dec},
-  Opcode{code: 0x06, cycles: (11,11), byte_count: 3, table: "iy", instruction: "LD B,n", func: Instruction::nop},
+  Opcode{code: 0x06, cycles: (11,11), byte_count: 3, table: "iy", instruction: "LD B,n", func: Instruction::ld},
   Opcode{code: 0x07, cycles: (0,0),   byte_count: 2, table: "iy", instruction: "UNKNOWN", func: Instruction::nop},
   Opcode{code: 0x08, cycles: (0,0),   byte_count: 2, table: "iy", instruction: "UNKNOWN", func: Instruction::nop},
   Opcode{code: 0x09, cycles: (15,15), byte_count: 2, table: "iy", instruction: "ADD IY,BC", func: Instruction::add},
@@ -1074,7 +1074,7 @@ pub static IY_OPCODES: [Opcode; 256] =
   Opcode{code: 0x13, cycles: (0,0),   byte_count: 2, table: "iy", instruction: "UNKNOWN", func: Instruction::nop},
   Opcode{code: 0x14, cycles: (8,8),   byte_count: 2, table: "iy", instruction: "INC D", func: Instruction::inc},
   Opcode{code: 0x15, cycles: (8,8),   byte_count: 2, table: "iy", instruction: "DEC D", func: Instruction::dec},
-  Opcode{code: 0x16, cycles: (11,11), byte_count: 3, table: "iy", instruction: "LD D,n", func: Instruction::nop},
+  Opcode{code: 0x16, cycles: (11,11), byte_count: 3, table: "iy", instruction: "LD D,n", func: Instruction::ld},
   Opcode{code: 0x17, cycles: (0,0),   byte_count: 2, table: "iy", instruction: "UNKNOWN", func: Instruction::nop},
   Opcode{code: 0x18, cycles: (0,0),   byte_count: 2, table: "iy", instruction: "UNKNOWN", func: Instruction::nop},
   Opcode{code: 0x19, cycles: (15,15), byte_count: 2, table: "iy", instruction: "ADD IY,DE", func: Instruction::add},
@@ -1277,11 +1277,11 @@ pub static IY_OPCODES: [Opcode; 256] =
   Opcode{code: 0xDE, cycles: (0,0),   byte_count: 2, table: "iy", instruction: "UNKNOWN", func: Instruction::nop},
   Opcode{code: 0xDF, cycles: (0,0),   byte_count: 2, table: "iy", instruction: "UNKNOWN", func: Instruction::nop},
   Opcode{code: 0xE0, cycles: (0,0),   byte_count: 2, table: "iy", instruction: "UNKNOWN", func: Instruction::nop},
-  Opcode{code: 0xE1, cycles: (14,14),   byte_count: 2, table: "iy", instruction: "POP IY", func: Instruction::pop},
+  Opcode{code: 0xE1, cycles: (14,14), byte_count: 2, table: "iy", instruction: "POP IY", func: Instruction::pop},
   Opcode{code: 0xE2, cycles: (0,0),   byte_count: 2, table: "iy", instruction: "UNKNOWN", func: Instruction::nop},
-  Opcode{code: 0xE3, cycles: (23,23),   byte_count: 2, table: "iy", instruction: "EX (SP),IY", func: Instruction::ex},
+  Opcode{code: 0xE3, cycles: (23,23), byte_count: 2, table: "iy", instruction: "EX (SP),IY", func: Instruction::ex},
   Opcode{code: 0xE4, cycles: (0,0),   byte_count: 2, table: "iy", instruction: "UNKNOWN", func: Instruction::nop},
-  Opcode{code: 0xE5, cycles: (15,15),   byte_count: 2, table: "iy", instruction: "PUSH IY", func: Instruction::push},
+  Opcode{code: 0xE5, cycles: (15,15), byte_count: 2, table: "iy", instruction: "PUSH IY", func: Instruction::push},
   Opcode{code: 0xE6, cycles: (0,0),   byte_count: 2, table: "iy", instruction: "UNKNOWN", func: Instruction::nop},
   Opcode{code: 0xE7, cycles: (0,0),   byte_count: 2, table: "iy", instruction: "UNKNOWN", func: Instruction::nop},
   Opcode{code: 0xE8, cycles: (0,0),   byte_count: 2, table: "iy", instruction: "UNKNOWN", func: Instruction::nop},
@@ -1301,7 +1301,7 @@ pub static IY_OPCODES: [Opcode; 256] =
   Opcode{code: 0xF6, cycles: (0,0),   byte_count: 2, table: "iy", instruction: "UNKNOWN", func: Instruction::nop},
   Opcode{code: 0xF7, cycles: (0,0),   byte_count: 2, table: "iy", instruction: "UNKNOWN", func: Instruction::nop},
   Opcode{code: 0xF8, cycles: (0,0),   byte_count: 2, table: "iy", instruction: "UNKNOWN", func: Instruction::nop},
-  Opcode{code: 0xF9, cycles: (10,10),   byte_count: 2, table: "iy", instruction: "LD SP,IY", func: Instruction::ld},
+  Opcode{code: 0xF9, cycles: (10,10), byte_count: 2, table: "iy", instruction: "LD SP,IY", func: Instruction::ld},
   Opcode{code: 0xFA, cycles: (0,0),   byte_count: 2, table: "iy", instruction: "UNKNOWN", func: Instruction::nop},
   Opcode{code: 0xFB, cycles: (0,0),   byte_count: 2, table: "iy", instruction: "UNKNOWN", func: Instruction::nop},
   Opcode{code: 0xFC, cycles: (0,0),   byte_count: 2, table: "iy", instruction: "UNKNOWN", func: Instruction::nop},

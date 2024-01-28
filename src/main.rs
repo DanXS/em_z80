@@ -16,6 +16,7 @@ fn main() {
         Ok(file) => file,
         Err(error) => panic!("Problem opening the file: {:?}", error),
     };
+    set_cpu_frequency(3.5f32);
     let main_window = MainWindow::new().unwrap();
     build_memory_view(&main_window);
     build_register_view(&main_window);

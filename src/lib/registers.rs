@@ -9,17 +9,6 @@ pub enum Flag {
   S     // Sign Flag
 }
 
-fn bit_pos_for_flag(flag: Flag) -> u8 {
-  match flag {
-    Flag::C => 0,
-    Flag::N => 1,
-    Flag::PV => 2,
-    Flag::H => 4,
-    Flag::Z => 6,
-    Flag::S => 7
-  }
-}
-
 fn bit_mask_for_flag(flag: Flag) -> u8 {
   match flag {
     Flag::C => 0x01,
