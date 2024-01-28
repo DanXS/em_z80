@@ -25,7 +25,7 @@ fn main() {
     let weak_window = main_window.as_weak();
     main_window.on_step(move || {
         let (text, _) = disassemble_addr(get_pc());
-        println!("Step: {} ", text);
+        println!("Step: {:04X?}: {} ", get_pc(), text);
         step();
         build_disassembly_view(&(weak_window.unwrap())); 
         build_register_view(&(weak_window.unwrap()));

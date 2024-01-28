@@ -118,8 +118,6 @@ impl InstTrait for Instruction {
 
   // LD instruction
   fn ld(&self) {
-    // ToDo: LD for IX & IY
-    // Do actual instructions and set flags etc.
     if self.table == "main" {
       if self.len == 0 {
         let reg_map = ["B", "C", "D", "E", "H", "L", "(HL)", "A"];
@@ -475,55 +473,25 @@ impl InstTrait for Instruction {
   }
 
   // INC instruction
-  #[allow(unused_assignments)]
   fn inc(&self) {
-    // ToDo: IX and IY
     if self.table == "main" {
       if self.code & 0xC7 == 0x04 {
         // INC r
         let reg_map = ["B", "C", "D", "E", "H", "L", "(HL)", "A"];
         let dst = ((self.code & 0x38) >> 3) as usize;
         let reg = reg_map[dst];
-        let mut addr : u16 = 0x0000;
-        let mut val : u8 = 0x00;
         if reg == "(HL)" {
-          addr = read_reg16("HL");
-          val = Memory::read8(addr);
+          let addr = read_reg16("HL");
+          let val = Memory::read8(addr);
+          let inc_val = inc_u8_wrap(val);
+          Memory::write8(addr, inc_val);
+          update_flags_for_inc(val, inc_val);
         }
         else  {
-          val = read_reg8(reg);
-        }
-        let inc_val = inc_u8_wrap(val);
-        if val == 0x7F {
-          set_flag(Flag::PV);
-        }
-        else {
-          clear_flag(Flag::PV);
-        }
-        if inc_val == 0x00 {
-          set_flag(Flag::Z);
-        }
-        else {
-          clear_flag(Flag::Z);
-        }
-        if val & 0x0F == 0x0F {
-          set_flag(Flag::H);
-        }
-        else {
-          clear_flag(Flag::H);
-        }
-        if inc_val & 0x80 == 0x80  {
-          set_flag(Flag::S);
-        }
-        else {
-          clear_flag(Flag::S);
-        }
-        clear_flag(Flag::N);
-        if reg == "(HL)" {
-          Memory::write8(addr, inc_val);
-        }
-        else {
+          let val = read_reg8(reg);
+          let inc_val = inc_u8_wrap(val);
           write_reg8(reg, inc_val);
+          update_flags_for_inc(val, inc_val);
         }
       }
       else if self.code & 0xCF == 0x03 {
@@ -538,61 +506,70 @@ impl InstTrait for Instruction {
         report_unknown("INC");
       }
     }
+    else if self.table == "ix" {
+      if self.len == 0 && self.code == 0x23 {
+        // INC IX
+        let val = read_reg16("IX");
+        write_reg16("IX", inc_u16_wrap(val));
+      }
+      if self.len == 1 && self.code == 0x34 {
+        // INC (IX + d)
+        let addr = read_reg16("IX");
+        let src_addr = calc_address_with_offset(addr, self.data as u8);
+        let val = Memory::read8(src_addr);
+        let inc_val = inc_u8_wrap(val);
+        Memory::write8(src_addr, inc_val);
+        update_flags_for_inc(val, inc_val);
+      }
+      else {
+        report_unknown("INC")
+      }
+    }
+    else if self.table == "iy" {
+      if self.len == 0 && self.code == 0x23 {
+        // INC IY
+        let val = read_reg16("IY");
+        write_reg16("IY", inc_u16_wrap(val));
+      }
+      else if self.len == 1 && self.code == 0x34 {
+        // INC (IY + d)
+        let addr = read_reg16("IY");
+        let src_addr = calc_address_with_offset(addr, self.data as u8);
+        let val = Memory::read8(src_addr);
+        let inc_val = inc_u8_wrap(val);
+        Memory::write8(src_addr, inc_val);
+        update_flags_for_inc(val, inc_val);
+      }
+      else {
+        report_unknown("INC")
+      }
+    }
     else {
       report_unknown("INC");
     }
   }
 
   // DEC instruction
-  #[allow(unused_assignments)]
   fn dec(&self) {
-    // ToDo: IX and IY
     if self.table == "main" {
       if self.code & 0xC7 == 0x05 {
-        // DEC r
         let reg_map = ["B", "C", "D", "E", "H", "L", "(HL)", "A"];
         let dst = ((self.code & 0x38) >> 3) as usize;
         let reg = reg_map[dst];
-        let mut addr : u16 = 0x0000;
-        let mut val : u8 = 0x00;
         if reg == "(HL)" {
-          addr = read_reg16("HL");
-          val = Memory::read8(addr);
+          // DEC (HL)
+          let addr = read_reg16("HL");
+          let val = Memory::read8(addr);
+          let dec_val = dec_u8_wrap(val);
+          Memory::write8(addr, dec_val);
+          update_flags_for_dec(val, dec_val);
         }
         else  {
-          val = read_reg8(reg);
-        }
-        let dec_val = dec_u8_wrap(val);
-        if val == 0x80 {
-          set_flag(Flag::PV);
-        }
-        else {
-          clear_flag(Flag::PV);
-        }
-        if dec_val == 0x00 {
-          set_flag(Flag::Z);
-        }
-        else {
-          clear_flag(Flag::Z);
-        }
-        if val & 0x1F == 0x10 {
-          set_flag(Flag::H);
-        }
-        else {
-          clear_flag(Flag::H);
-        }
-        if dec_val & 0x80 == 0x80  {
-          set_flag(Flag::S);
-        }
-        else {
-          clear_flag(Flag::S);
-        }
-        clear_flag(Flag::N);
-        if reg == "(HL)" {
-          Memory::write8(addr, dec_val);
-        }
-        else {
+          // DEC r
+          let val = read_reg8(reg);
+          let dec_val = dec_u8_wrap(val);
           write_reg8(reg, dec_val);
+          update_flags_for_dec(val, dec_val);
         }
       }
       else if self.code & 0xCF == 0x0B {
@@ -607,23 +584,64 @@ impl InstTrait for Instruction {
         report_unknown("DEC");
       }
     }
+    else if self.table == "ix" {
+      if self.len == 0 && self.code == 0x2B {
+        // DEX IX
+        let val = read_reg16("IX");
+        write_reg16("IX", dec_u16_wrap(val));
+      }
+      if self.len == 1 && self.code == 0x34 {
+        // DEC (IX + d)
+        let addr = read_reg16("IX");
+        let src_addr = calc_address_with_offset(addr, self.data as u8);
+        let val = Memory::read8(src_addr);
+        let dec_val = dec_u8_wrap(val);
+        Memory::write8(src_addr, dec_val);
+        update_flags_for_dec(val,dec_val);
+      }
+      else {
+        report_unknown("INC")
+      }
+    }
+    else if self.table == "iy" {
+      if self.len == 0 && self.code == 0x2B {
+        // DEX IY
+        let val = read_reg16("IY");
+        write_reg16("IY", dec_u16_wrap(val));
+      }
+      if self.len == 1 && self.code == 0x34 {
+        // DEC (IY + d)
+        let addr = read_reg16("IY");
+        let src_addr = calc_address_with_offset(addr, self.data as u8);
+        let val = Memory::read8(src_addr);
+        let dec_val = dec_u8_wrap(val);
+        Memory::write8(src_addr, dec_val);
+        update_flags_for_dec(val, dec_val);
+      }
+      else {
+        report_unknown("INC")
+      }
+    }
     else {
       report_unknown("DEC");
     }
   }
 
+  // PUSH Instruction
   fn push(&self) {
-    if self.table == "main" && self.code & 0xCF == 0xC5 { 
-        let reg_map = ["BC", "DE", "HL", "SP"];
-        let src = ((self.code & 0x30) >> 4) as usize;
-        let src_reg = reg_map[src];
-        let val = read_reg16(src_reg);
-        let mut addr = read_reg16("SP");
-        addr = ((addr as i32) - 2) as u16;
-        write_reg16("SP", addr);
-        Memory::write16(addr, val);
+    if self.table == "main" && self.code & 0xCF == 0xC5 {
+      // PUSH rr
+      let reg_map = ["BC", "DE", "HL", "SP"];
+      let src = ((self.code & 0x30) >> 4) as usize;
+      let src_reg = reg_map[src];
+      let val = read_reg16(src_reg);
+      let mut addr = read_reg16("SP");
+      addr = ((addr as i32) - 2) as u16;
+      write_reg16("SP", addr);
+      Memory::write16(addr, val);
     }
     else if self.table == "ix" && self.code == 0xE5 {
+      // PUSH IX
       let val = read_reg16("IX");
       let mut addr = read_reg16("SP");
       addr = ((addr as i32) - 2) as u16;
@@ -631,6 +649,7 @@ impl InstTrait for Instruction {
       Memory::write16(addr, val);
     }
     else if self.table == "iy" && self.code == 0xE5 {
+      // PUSH IY
       let val = read_reg16("IY");
       let mut addr = read_reg16("SP");
       addr = ((addr as i32) - 2) as u16;
@@ -642,11 +661,13 @@ impl InstTrait for Instruction {
     }
   }
 
+  // POP Instruction
   fn pop(&self) {
     if self.table == "main" && self.code & 0xCF == 0xC1 {
+      // POP rr
       let reg_map = ["BC", "DE", "HL", "SP"];
-      let dst = ((self.code & 0x30) >> 4) as usize;
-      let dst_reg = reg_map[dst];
+      let rr = ((self.code & 0x30) >> 4) as usize;
+      let dst_reg = reg_map[rr];
       let mut addr = read_reg16("SP");
       let val = Memory::read16(addr);
       write_reg16(dst_reg, val);
@@ -654,6 +675,7 @@ impl InstTrait for Instruction {
       write_reg16("SP", addr);
     }
     else if self.table == "ix" && self.code == 0xE1 {
+      // POP IX
       let mut addr = read_reg16("SP");
       let val = Memory::read16(addr);
       write_reg16("IX", val);
@@ -661,6 +683,7 @@ impl InstTrait for Instruction {
       write_reg16("SP", addr);
     }
     else if self.table == "iy" && self.code == 0xE1 {
+      // POP IY
       let mut addr = read_reg16("SP");
       let val = Memory::read16(addr);
       write_reg16("IY", val);
@@ -672,16 +695,156 @@ impl InstTrait for Instruction {
     }
   }
 
+  // ADD Instruction
+  #[allow(unused_assignments)]
   fn add(&self) {
-    report_unknown("ADD");
+    if self.table == "main" {
+      if self.len == 0 {
+        if self.code & 0xF8 == 0x80 {
+          // ADD A,r
+          let reg_map = ["B", "C", "D", "E", "H", "L", "(HL)", "A"];
+          let r = self.code & 0x07;
+          let src_reg = reg_map[r as usize];
+          let val1 = read_reg8("A");
+          let mut val2: u8 = 0x00;
+          if src_reg == "(HL)" {
+            let src_addr = read_reg16("HL");
+            val2 = Memory::read8(src_addr);
+          }
+          else {
+            val2 = read_reg8(src_reg);
+          }
+          let res = (val1 as u16) + (val2 as u16);
+          write_reg8("A", (res & 0xFF) as u8);
+          update_flags_for_addition(val1, val2, res);
+        }
+        else {
+          report_unknown("ADD");
+        }
+      }
+      else if self.len == 1 {
+        if self.code == 0xC6 {
+          // ADD A,n
+          let val1 = read_reg8("A");
+          let val2 = ((self.data >> 8) & 0xFF) as u8;
+          let res = (val1 as u16) + (val2 as u16);
+          write_reg8("A", (res & 0xFF) as u8);
+          update_flags_for_addition(val1, val2, res);
+        }
+        else {
+          report_unknown("ADD");
+        }
+      }
+      else {
+        report_unknown("ADD");
+      }
+    }
+    else if self.table == "ix" {
+      // ADD A, (IX + d)
+      if self.code == 0x86 {
+        let val1 = read_reg8("A");
+        let addr = read_reg16("IX");
+        let src_addr = calc_address_with_offset(addr, self.data as u8);
+        let val2 = Memory::read8(src_addr);
+        let res = (val1 as u16) + (val2 as u16);
+        write_reg8("A", (res & 0xFF) as u8);
+        update_flags_for_addition(val1, val2, res);
+      }
+    }
+    else if self.table == "iy" {
+      // ADD A, (IY + d)
+      if self.code == 0x86 {
+        let val1 = read_reg8("A");
+        let addr = read_reg16("IY");
+        let src_addr = calc_address_with_offset(addr, self.data as u8);
+        let val2 = Memory::read8(src_addr);
+        let res = (val1 as u16) + (val2 as u16);
+        write_reg8("A", (res & 0xFF) as u8);
+        update_flags_for_addition(val1, val2, res);
+      }
+    }
+    else {
+      // ToDo: implement IY/IX
+      report_unknown("ADD");
+    }
   }
 
   fn adc(&self) {
     report_unknown("ADC");
   }
 
+  // SUB Instruction
+  #[allow(unused_assignments)]
   fn sub(&self) {
-    report_unknown("SUB");
+    if self.table == "main" {
+      if self.len == 0 {
+        if self.code & 0xF8 == 0x90 {
+          // SUB A,r
+          let reg_map = ["B", "C", "D", "E", "H", "L", "(HL)", "A"];
+          let r = self.code & 0x07;
+          let src_reg = reg_map[r as usize];
+          let val1 = read_reg8("A");
+          let mut val2: u8 = 0x00;
+          if src_reg == "(HL)" {
+            let src_addr = read_reg16("HL");
+            val2 = Memory::read8(src_addr);
+          }
+          else {
+            val2 = read_reg8(src_reg);
+          }
+          let res = (val1 as u16) - (val2 as u16);
+          write_reg8("A", (res & 0xFF) as u8);
+          update_flags_for_subtraction(val1, val2, res);
+        }
+        else {
+          report_unknown("SUB");
+        }
+      }
+      else if self.len == 1 {
+        if self.code == 0xD6 {
+          // SUB A,n
+          let val1 = read_reg8("A");
+          let val2 = ((self.data >> 8) & 0xFF) as u8;
+          let res = (val1 as u16) - (val2 as u16);
+          write_reg8("A", (res & 0xFF) as u8);
+          update_flags_for_subtraction(val1, val2, res);
+        }
+        else {
+          report_unknown("SUB");
+        }
+      }
+      else {
+        report_unknown("SUB");
+      }
+    }
+    else if self.table == "ix" {
+      // SUB A, (IX + d)
+      if self.code == 0x96 {
+        let val1 = read_reg8("A");
+        let addr = read_reg16("IX");
+        let src_addr = calc_address_with_offset(addr, self.data as u8);
+        let val2 = Memory::read8(src_addr);
+        let res = (val1 as u16) - (val2 as u16);
+        write_reg8("A", (res & 0xFF) as u8);
+        update_flags_for_subtraction(val1, val2, res);
+      }
+    }
+    else if self.table == "iy" {
+      // SUB A, (IY + d)
+      if self.code == 0x96 {
+        let val1 = read_reg8("A");
+        let addr = read_reg16("IY");
+        let src_addr = calc_address_with_offset(addr, self.data as u8);
+        let val2 = Memory::read8(src_addr);
+        let res = (val1 as u16) - (val2 as u16);
+        write_reg8("A", (res & 0xFF) as u8);
+        update_flags_for_subtraction(val1, val2, res);
+      }
+    }
+    else {
+      // ToDo: implement IY/IX
+      report_unknown("SUB");
+    }
   }
 
   fn sbc(&self) {
@@ -780,6 +943,7 @@ impl InstTrait for Instruction {
     report_unknown("SET");
   }
 
+  // JP Instruction
   fn jp(&self) {
     if self.table == "main" {
       if self.code == 0xC3 {
@@ -839,6 +1003,7 @@ impl InstTrait for Instruction {
     }
   }
 
+  // JR Instruction
   fn jr(&self) {
     if self.table == "main" {
       let addr = Cpu::get_register16("PC");

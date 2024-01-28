@@ -74,6 +74,136 @@ pub fn is_flag_set(flag: Flag) -> bool {
   }
 }
 
+#[inline]
+pub fn update_flags_for_inc(val : u8, inc_val : u8) {
+  if val == 0x7F {
+    set_flag(Flag::PV);
+  }
+  else {
+    clear_flag(Flag::PV);
+  }
+  if inc_val == 0x00 {
+    set_flag(Flag::Z);
+  }
+  else {
+    clear_flag(Flag::Z);
+  }
+  if val & 0x0F == 0x0F {
+    set_flag(Flag::H);
+  }
+  else {
+    clear_flag(Flag::H);
+  }
+  if inc_val & 0x80 == 0x80  {
+    set_flag(Flag::S);
+  }
+  else {
+    clear_flag(Flag::S);
+  }
+  clear_flag(Flag::N);
+}
+
+#[inline]
+pub fn update_flags_for_dec(val : u8, dec_val : u8) {
+  if val == 0x80 {
+    set_flag(Flag::PV);
+  }
+  else {
+    clear_flag(Flag::PV);
+  }
+  if dec_val == 0x00 {
+    set_flag(Flag::Z);
+  }
+  else {
+    clear_flag(Flag::Z);
+  }
+  if val & 0x1F == 0x10 {
+    set_flag(Flag::H);
+  }
+  else {
+    clear_flag(Flag::H);
+  }
+  if dec_val & 0x80 == 0x80  {
+    set_flag(Flag::S);
+  }
+  else {
+    clear_flag(Flag::S);
+  }
+  clear_flag(Flag::N);
+}
+
+#[inline]
+pub fn update_flags_for_addition(val1 : u8, val2: u8, res: u16) {
+  if res & 0x10 == 0x10  {
+    set_flag(Flag::S);
+  }
+  else {
+    clear_flag(Flag::S)
+  }
+  if res == 0 {
+    set_flag(Flag::Z);
+  }
+  else {
+    clear_flag(Flag::Z);
+  }
+  if ((val1 & 0x0F) + (val2 & 0x0F)) & 0x10 == 0x10 {
+    set_flag(Flag::H);
+  }
+  else {
+    clear_flag(Flag::H);
+  }
+  if res & 0x100 == 0x100 {
+    set_flag(Flag::C);
+  }
+  else {
+    clear_flag(Flag::C);
+  }
+  if (val1 & 0x10 == 0x10) && (val2 & 0x10 == 0x10) && (res & 0x10 == 0x00) ||
+     (val1 & 0x10 == 0x00) && (val2 & 0x10 == 0x00) && (res & 0x10 == 0x10) {
+    set_flag(Flag::PV);
+  }
+  else {
+    clear_flag(Flag::PV);
+  }
+  clear_flag(Flag::N);
+}
+
+#[inline]
+pub fn update_flags_for_subtraction(val1 : u8, val2: u8, res: u16) {
+  if res & 0x10 == 0x10  {
+    set_flag(Flag::S);
+  }
+  else {
+    clear_flag(Flag::S)
+  }
+  if res == 0 {
+    set_flag(Flag::Z);
+  }
+  else {
+    clear_flag(Flag::Z);
+  }
+  if ((val1 & 0x1F) - (val2 & 0x1F)) & 0x80 == 0x80 {
+    set_flag(Flag::H);
+  }
+  else {
+    clear_flag(Flag::H);
+  }
+  if res & 0x100 == 0x100 {
+    set_flag(Flag::C);
+  }
+  else {
+    clear_flag(Flag::C);
+  }
+  if (val1 & 0x10 == 0x10) && (val2 & 0x10 == 0x00) && (res & 0x10 == 0x00) ||
+     (val1 & 0x10 == 0x00) && (val2 & 0x10 == 0x10) && (res & 0x10 == 0x10) {
+    set_flag(Flag::PV);
+  }
+  else {
+    clear_flag(Flag::PV);
+  }
+  set_flag(Flag::N);
+}
+
 struct CpuState {
   pub cycle_time: u64,
   pub active_cycles: u8
