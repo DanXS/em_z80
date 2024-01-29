@@ -9,7 +9,7 @@ pub enum Flag {
   S     // Sign Flag
 }
 
-fn bit_mask_for_flag(flag: Flag) -> u8 {
+pub fn bit_mask_for_flag(flag: Flag) -> u8 {
   match flag {
     Flag::C => 0x01,
     Flag::N => 0x02,

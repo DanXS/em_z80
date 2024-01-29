@@ -20,6 +20,7 @@ fn main() {
     let main_window = MainWindow::new().unwrap();
     build_memory_view(&main_window);
     build_register_view(&main_window);
+    build_status_register_flag_view(&main_window);
     build_disassembly_view(&main_window);
     main_window.set_is_running(false);
     let weak_window = main_window.as_weak();
@@ -29,6 +30,7 @@ fn main() {
         step();
         build_disassembly_view(&(weak_window.unwrap())); 
         build_register_view(&(weak_window.unwrap()));
+        build_status_register_flag_view(&(weak_window.unwrap()));
         build_memory_view(&(weak_window.unwrap()));
     });
     let weak_window = main_window.as_weak();
@@ -54,9 +56,23 @@ fn main() {
                 if reg_str == "PC" {
                     build_disassembly_view(&(weak_window.unwrap())); 
                 }
+                else if reg_str == "AF" {
+                    build_status_register_flag_view(&(weak_window.unwrap()))
+                }
             },
             Err(e) => println!("{}", e),
         };
+    });
+    let weak_window = main_window.as_weak();
+    main_window.on_update_status_flag(move |flag: SharedString, val: bool| {
+        let flag_str = flag.as_str();
+        if val {
+            set_status_flag(flag_str);
+        }
+        else {
+            clear_status_flag(flag_str);
+        }
+        build_register_view(&(weak_window.unwrap()));
     });
     let weak_window = main_window.as_weak();
     main_window.on_memory_scroll_to_addr(move |val: SharedString| {
@@ -89,6 +105,22 @@ fn build_register_view(main_window: &MainWindow) {
     let register_view_model : Rc<VecModel<SharedString>> = Rc::new(VecModel::from(vec_model));
     let register_view_model_rc = ModelRc::from(register_view_model.clone());
     main_window.set_register_view_data(register_view_model_rc);
+}
+
+fn build_status_register_flag_view(main_window: &MainWindow) {
+    let vec_model: Vec<bool> = [
+        get_status_flag("C"),
+        get_status_flag("N"),
+        get_status_flag("P/V"),
+        get_status_flag("H"),
+        get_status_flag("Z"),
+        get_status_flag("S")
+    ].to_vec();
+    println!("status flags: C:{} N:{} P/V:{} H:{} Z:{} S:{}",
+        vec_model[0], vec_model[1], vec_model[2], vec_model[3], vec_model[4], vec_model[5]);
+    let status_view_model : Rc<VecModel<bool>> = Rc::new(VecModel::from(vec_model));
+    let status_view_model_rc = ModelRc::from(status_view_model.clone());
+    main_window.set_status_view_data(status_view_model_rc);
 }
 
 fn build_disassembly_view(main_window: &MainWindow) {

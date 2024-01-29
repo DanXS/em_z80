@@ -230,16 +230,28 @@ impl Cpu {
     read_reg8(reg)
   }
 
-  pub fn set_register8(reg: &str, addr: u8) {
-    write_reg8(reg, addr);
+  pub fn set_register8(reg: &str, val: u8) {
+    write_reg8(reg, val);
   }
 
   pub fn get_register16(reg: &str) -> u16 {
     read_reg16(reg)
   }
 
-  pub fn set_register16(reg: &str, addr: u16) {
-    write_reg16(reg, addr);
+  pub fn set_register16(reg: &str, val: u16) {
+    write_reg16(reg, val);
+  }
+
+  pub fn set_status_flag(flag: Flag) {
+    set_flag(flag);
+  }
+  
+  pub fn clear_status_flag(flag: Flag) {
+    clear_flag(flag);
+  }
+  
+  pub fn get_status_flag(flag: Flag) -> bool {
+    is_flag_set(flag)
   }
 
   pub fn set_cpu_frequency(mhz: f32) {

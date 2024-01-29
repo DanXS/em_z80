@@ -1,7 +1,7 @@
 
 import "../../fonts/Menlo.ttc";
 
-import { Button, ListView, HorizontalBox, ScrollView, LineEdit, ComboBox } from "std-widgets.slint";
+import { Button, ListView, HorizontalBox, ScrollView, LineEdit, ComboBox , CheckBox} from "std-widgets.slint";
 
 component DisplayView inherits Rectangle {
     width: 62.5%;
@@ -69,7 +69,10 @@ component MemoryView inherits Rectangle {
 
 component RegisterView inherits Rectangle {
     in property <[string]> data;
+    in property <[string]> status_flag_names;
+    in property <[bool]> status_flag_states;
     callback set_register(string, string);
+    callback update_status_flag(string, bool);
     out property <string> reg_str;
     out property <string> val_str;
     width: 37.5%;
@@ -137,29 +140,13 @@ component RegisterView inherits Rectangle {
                         padding-left:10px;
                         padding-top: 10px;
                         padding-bottom: 10px;
-                        Text {
-                            text: "C";
-                            font-size: 11pt;
-                        }
-                        Text {
-                            text: "N";
-                            font-size: 11pt;
-                        }
-                        Text {
-                            text: "P/V";
-                            font-size: 11pt;
-                        }
-                        Text {
-                            text: "H";
-                            font-size: 11pt;
-                        }
-                        Text {
-                            text: "Z";
-                            font-size: 11pt;
-                        }
-                        Text {
-                            text: "S";
-                            font-size: 11pt;
+                        for i in status-flag-states.length
+                        : CheckBox {
+                            checked: status-flag-states[i];
+                            text: status-flag-names[i];
+                            toggled => {
+                                update-status-flag(self.text, self.checked);
+                            }
                         }
                     }
                 }
@@ -207,7 +194,7 @@ component DisassemblyView inherits Rectangle {
                 for txt in data
                 : Rectangle {
                     height: 30px;
-                    background: {(txt == data[0]) ? #ff9E37 : #1C1C1C};
+                    background: {(txt == data[0]) ? #68cdff44 : #1C1C1C};
                     width: parent.width;
                     Text {
                         x: 0;
@@ -223,12 +210,14 @@ component DisassemblyView inherits Rectangle {
 export component MainWindow inherits Window {
     in property <[string]> memory_view_data;
     in property <[string]> register_view_data;
+    in property <[bool]> status_view_data;
     in property <[string]> disassembly_view_data;
     in-out property <bool> is_running;
     in property <int> memory_scroll_row;
     callback step;
     callback start_stop;
     callback set_register(string, string);
+    callback update_status_flag(string, bool);
     callback memory_scroll_to_addr(string);
     default-font-family: "Menlo";
     preferred-width: 1024px;
@@ -250,8 +239,13 @@ export component MainWindow inherits Window {
         VerticalLayout {
             RegisterView {
                 data: register_view_data;
+                status-flag-names: ["C","N","P/V","H","Z","S"];
+                status-flag-states: status_view_data;
                 set_register(reg, val) => {
                     root.set_register(reg, val);
+                }
+                update_status_flag(flag, val) => {
+                    root.update_status_flag(flag, val);
                 }
             }
             DisassemblyView {

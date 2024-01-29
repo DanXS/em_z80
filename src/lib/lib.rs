@@ -8,6 +8,7 @@ mod opcodes;
 extern crate core;
 
 use std::io;
+use registers::Flag;
 use crate::cpu::Cpu;
 use crate::memory::Memory;
 
@@ -69,6 +70,48 @@ pub fn get_register16(reg: &str) -> u16 {
 // Set a 16 bit register to a specified value
 pub fn set_register16(reg: &str, val: u16) {
   Cpu::set_register16(reg, val);
+}
+
+// Set the status flag
+// Flag names should be one of "C", "N", "P/V", "H", "Z" or "S"
+pub fn set_status_flag(flag: &str) {
+  match flag {
+    "C" => Cpu::set_status_flag(Flag::C),
+    "N" => Cpu::set_status_flag(Flag::N),
+    "P/V" => Cpu::set_status_flag(Flag::PV),
+    "H" => Cpu::set_status_flag(Flag::H),
+    "Z" => Cpu::set_status_flag(Flag::Z),
+    "S" => Cpu::set_status_flag(Flag::S),
+    _ => panic!("Status flag does not exist!")
+  }
+}
+
+// Clear the status flag
+// Flag names should be one of "C", "N", "P/V", "H", "Z" or "S"
+pub fn clear_status_flag(flag: &str) {
+  match flag {
+    "C" => Cpu::clear_status_flag(Flag::C),
+    "N" => Cpu::clear_status_flag(Flag::N),
+    "P/V" => Cpu::clear_status_flag(Flag::PV),
+    "H" => Cpu::clear_status_flag(Flag::H),
+    "Z" => Cpu::clear_status_flag(Flag::Z),
+    "S" => Cpu::clear_status_flag(Flag::S),
+    _ => panic!("Status flag does not exist!")
+  }
+}
+
+// Get the status flag
+// Flag names should be one of "C", "N", "P/V", "H", "Z" or "S"
+pub fn get_status_flag(flag: &str) -> bool {
+  match flag {
+    "C" => Cpu::get_status_flag(Flag::C),
+    "N" => Cpu::get_status_flag(Flag::N),
+    "P/V" => Cpu::get_status_flag(Flag::PV),
+    "H" => Cpu::get_status_flag(Flag::H),
+    "Z" => Cpu::get_status_flag(Flag::Z),
+    "S" => Cpu::get_status_flag(Flag::S),
+    _ => panic!("Status flag does not exist!")
+  }
 }
 
 // Step a single instruction at the current address given by the program counter
