@@ -23,10 +23,12 @@ fn main() {
     build_status_register_flag_view(&main_window);
     build_disassembly_view(&main_window);
     main_window.set_is_running(false);
+    set_enable_breakpoints(true);
+    main_window.set_enable_breakpoints(true);
     let weak_window = main_window.as_weak();
     main_window.on_step(move || {
         let (text, _) = disassemble_addr(get_pc());
-        println!("Step: {:04X?}: {} ", get_pc(), text);
+        println!("Step:\n{:04X?}: {} ", get_pc(), text);
         step();
         build_disassembly_view(&(weak_window.unwrap())); 
         build_register_view(&(weak_window.unwrap()));
@@ -37,11 +39,11 @@ fn main() {
     main_window.on_start_stop(move || {
         let is_running = weak_window.unwrap().get_is_running();
         if !is_running {
-            println!("Start");
+            run();
             weak_window.unwrap().set_is_running(!is_running);
         }
         else {
-            println!("Stop");
+            stop();
             weak_window.unwrap().set_is_running(!is_running);
         }
     });
@@ -85,8 +87,37 @@ fn main() {
             Err(e) => println!("{}", e),
         };
     });
+    main_window.on_toggle_breakpoint(move |line: SharedString| {
+        let line_str = line.as_str();
+        match address_from_disassembly(line_str) {
+            Ok(res) => {
+                toggle_breakpoint(res);
+            },
+            Err(e) => println!("{}", e),
+        };
+    });
+    let weak_window = main_window.as_weak();
+    main_window.on_toggle_enable_breakpoints(move || {
+        let is_enabled = weak_window.unwrap().get_enable_breakpoints();
+        (weak_window.unwrap()).set_enable_breakpoints(!is_enabled);
+
+        build_disassembly_view(&(weak_window.unwrap()));
+    });
+    main_window.global::<Logic>().on_has_breakpoint(|line| {
+        let line_str = line.as_str();
+        match address_from_disassembly(line_str) {
+            Ok(res) => {
+                has_breakpoint(res)
+            },
+            _ => false,
+        }
+    });
     main_window.run().unwrap();
-    
+}
+
+pub fn address_from_disassembly(line: &str) -> Result<u16, std::num::ParseIntError> {
+    let addr_str = line.split_once(":").unwrap().0;
+    u16::from_str_radix(&addr_str, 16)
 }
 
 fn build_memory_view(main_window: &MainWindow) {
@@ -126,7 +157,7 @@ fn build_status_register_flag_view(main_window: &MainWindow) {
 fn build_disassembly_view(main_window: &MainWindow) {
     let mut addr = get_pc();
     let mut str_vec : Vec<String> = Vec::new();
-    for _ in 0..100 {
+    for _ in 0..1000 {
         let (text, bytes) = disassemble_addr(addr);
         str_vec.push(format!("{:04X?}:    {}", addr, text));
         if addr as u32 == get_mem_size()-1 {
@@ -141,3 +172,4 @@ fn build_disassembly_view(main_window: &MainWindow) {
     let disassembly_view_model_rc = ModelRc::from(disassembly_view_model.clone());
     main_window.set_disassembly_view_data(disassembly_view_model_rc);
 }
+

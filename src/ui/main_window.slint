@@ -1,7 +1,11 @@
 
 import "../../fonts/Menlo.ttc";
 
-import { Button, ListView, HorizontalBox, ScrollView, LineEdit, ComboBox , CheckBox} from "std-widgets.slint";
+import { Button, ListView, HorizontalBox, ScrollView, LineEdit, ComboBox , CheckBox } from "std-widgets.slint";
+
+export global Logic  {
+    pure callback has_breakpoint(string) -> bool;
+}
 
 component DisplayView inherits Rectangle {
     width: 62.5%;
@@ -148,6 +152,10 @@ component RegisterView inherits Rectangle {
                                 update-status-flag(self.text, self.checked);
                             }
                         }
+                        Rectangle {
+                            background: #00000000;
+                            vertical-stretch: 1;
+                        }
                     }
                 }
             }
@@ -158,8 +166,12 @@ component RegisterView inherits Rectangle {
 component DisassemblyView inherits Rectangle {
     in property <[string]> data;
     in-out property <bool> is_running;
+    in-out property <bool> enable_breakpoints;
     callback step;
     callback start_stop;
+    callback toggle_breakpoint(string);
+    callback toggle-enable-breakpoints();
+    pure callback has_breakpoint <=> Logic.has_breakpoint;
     width: 37.5%;
     background: #323232;
     VerticalLayout {
@@ -169,12 +181,20 @@ component DisassemblyView inherits Rectangle {
                 font-size: 11pt;
                 text: "Disassembly";
             }
+            CheckBox {
+                checked: enable_breakpoints;
+                text: "BP";
+                toggled => {
+                    toggle-enable-breakpoints();
+                }
+            }
             Button {
                 width: 60px;
                 text : "Step";
                 enabled: !is_running; 
                 clicked => {
                     root.step();
+                    i-disassembly-list-view.viewport-y = 0;
                 }
             }
             Button {
@@ -182,6 +202,7 @@ component DisassemblyView inherits Rectangle {
                 text: is_running ? "Stop" : "Run";
                 clicked => {
                     root.start_stop();
+                    i-disassembly-list-view.viewport-y = 0;
                 }
             }
         }
@@ -189,17 +210,33 @@ component DisassemblyView inherits Rectangle {
             background: #1C1C1C;
             width: 100%;
             vertical-stretch: 1;
-            ListView {
+            i-disassembly-list-view := ListView {
                 width: 100%;       
                 for txt in data
                 : Rectangle {
                     height: 30px;
-                    background: {(txt == data[0]) ? #68cdff44 : #1C1C1C};
+                    background: {
+                        enable-breakpoints ?
+                        (has-breakpoint(txt) ? #ffcd68ff :
+                            (txt == data[0]) ? #68cdff44 : #1C1C1C) :
+                        (has-breakpoint(txt) ? #ffcd6844 :
+                             (txt == data[0]) ? #68cdff44 : #1C1C1C)
+                    };
                     width: parent.width;
                     Text {
                         x: 0;
                         text: txt;
                         font-size: 11pt;
+                    }
+                    touch := TouchArea {
+                        clicked => {
+                            toggle_breakpoint(txt);
+                            parent.background = enable-breakpoints ?
+                            (has-breakpoint(txt) ? #ffcd68ff :
+                                (txt == data[0]) ? #68cdff44 : #1C1C1C) :
+                            (has-breakpoint(txt) ? #ffcd6844 :
+                                 (txt == data[0]) ? #68cdff44 : #1C1C1C)
+                        }
                     }
                 }
             }
@@ -212,6 +249,7 @@ export component MainWindow inherits Window {
     in property <[string]> register_view_data;
     in property <[bool]> status_view_data;
     in property <[string]> disassembly_view_data;
+    in-out property <bool> enable_breakpoints;
     in-out property <bool> is_running;
     in property <int> memory_scroll_row;
     callback step;
@@ -219,6 +257,8 @@ export component MainWindow inherits Window {
     callback set_register(string, string);
     callback update_status_flag(string, bool);
     callback memory_scroll_to_addr(string);
+    callback toggle_breakpoint(string);
+    callback toggle-enable-breakpoints();
     default-font-family: "Menlo";
     preferred-width: 1024px;
     min-width: 880px;
@@ -251,11 +291,18 @@ export component MainWindow inherits Window {
             DisassemblyView {
                 data: disassembly_view_data;
                 is_running: is_running;
+                enable_breakpoints: enable_breakpoints;
+                toggle-enable-breakpoints() => {
+                    root.toggle-enable-breakpoints();
+                }
                 step => {
                     root.step();
                 }
                 start_stop => {
                     root.start_stop();
+                }
+                toggle_breakpoint(line) => {
+                    root.toggle_breakpoint(line);
                 }
             }
         }

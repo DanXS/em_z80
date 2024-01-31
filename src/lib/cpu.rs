@@ -204,14 +204,18 @@ pub fn update_flags_for_subtraction(val1 : u8, val2: u8, res: u16) {
   set_flag(Flag::N);
 }
 
-struct CpuState {
+struct CpuState{
   pub cycle_time: u64,
-  pub active_cycles: u8
+  pub active_cycles: u8,
+  enable_breakpoints: bool,
+  pub breakpoints: Vec<u16>
 }
 
 static mut CPU_STATE : CpuState = CpuState { 
   cycle_time: 286,
-  active_cycles: 0
+  active_cycles: 0,
+  enable_breakpoints: false,
+  breakpoints: Vec::new()
 };
 
 pub struct Cpu;
@@ -261,7 +265,6 @@ impl Cpu {
     else {
       let ns = (1.0f32/mhz*1e3) as u64;
       println!("CPU frequency {}mhz, cycle time {}ns", mhz, ns);
-
     }
   }
 
@@ -285,6 +288,34 @@ impl Cpu {
 
   pub fn get_register_view_string() -> String {
     unsafe { REG.to_string() }
+  }
+
+  pub fn toggle_breakpoint(addr: u16) {
+    unsafe {
+      let mut bps = CPU_STATE.breakpoints.clone();
+      match bps.binary_search(&addr) {
+        Ok(pos) => {
+            println!("Removing breakpoint {} at position {}", addr, pos);
+            bps.remove(pos);
+            CPU_STATE.breakpoints = bps;
+        },
+        Err(pos) => {
+            println!("Adding breakpoint {} at position {}", addr, pos);
+            bps.insert(pos, addr.clone());
+            CPU_STATE.breakpoints = bps;
+        }
+      }
+    }
+  }
+
+  pub fn set_enable_breakpoints(enabled : bool) {
+
+  }
+
+  pub fn has_breakpoint(addr: u16) -> bool {
+    unsafe{
+      CPU_STATE.breakpoints.contains(&addr)
+    }
   }
 
   pub fn disassemble(addr: u16) -> (String, u8) {
@@ -408,6 +439,14 @@ impl Cpu {
     let delay_ns = Self::get_cycle_time()*(Self::get_acitve_cycles() as u64);
     println!("Cycles to execute: {}, delay {}ns", Self::get_acitve_cycles(), delay_ns);
     thread::sleep(Duration::from_nanos(delay_ns));
+  }
+
+  pub fn run() {
+    println!("Run called");
+  }
+
+  pub fn stop() {
+    println!("Stop called");
   }
 
 }

@@ -1,3 +1,4 @@
+
 #[inline(always)]
 pub fn inc_u8_wrap(val: u8) -> u8 {
   (((val as u16) + 1) & 0xFF) as u8

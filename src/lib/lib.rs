@@ -119,6 +119,16 @@ pub fn step() {
   Cpu::step();
 }
 
+// Run continiously until a breakpoint is encountered (if enabled) or stop is called
+pub fn run() {
+  Cpu::run();
+}
+
+// Stop the running task
+pub fn stop() {
+  Cpu::stop();
+}
+
 // Get a string representing registers
 pub fn get_register_view_string() -> String {
   Cpu::get_register_view_string()
@@ -129,4 +139,19 @@ pub fn get_register_view_string() -> String {
 pub fn disassemble_addr(addr: u16) -> (String, u8) {
   let result = Cpu::disassemble(addr);
   return result;
+}
+
+// Toggle a breakpoint at a given address, if a breakpoint already exists it will be removed
+// otherwise it will be added
+pub fn toggle_breakpoint(addr: u16) {
+  Cpu::toggle_breakpoint(addr);
+}
+
+// Returns true if a breakpoint exists at a given address, otherwise false
+pub fn has_breakpoint(addr: u16) -> bool {
+  Cpu::has_breakpoint(addr)
+}
+
+pub fn set_enable_breakpoints(enabled: bool) {
+  Cpu::set_enable_breakpoints(enabled);
 }

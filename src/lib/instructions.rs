@@ -252,7 +252,6 @@ impl InstTrait for Instruction {
       }
     }
     else if self.table == "misc" {
-      println!("LD MISC code = {} len = {}",  self.code, self.len);
       if self.len == 0 {
         if self.code == 0x47 {
           // LD I,A
@@ -310,7 +309,6 @@ impl InstTrait for Instruction {
       }
     }
     else if self.table == "ix" {
-      println!("LD IX, Len = {}, code = {}", self.len, self.code);
       if self.len == 1 {
         if self.code & 0xC7 == 0x46 { 
           // LD r,(IX+d)
