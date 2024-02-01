@@ -269,12 +269,19 @@ impl Cpu {
     else {
       let ns = (1.0f32/mhz*1e3) as u64;
       println!("CPU frequency {}mhz, cycle time {}ns", mhz, ns);
+      Cpu::set_cycle_time(ns);
     }
   }
 
   pub fn get_cycle_time() -> u64 {
     unsafe {
       CPU_STATE.lock().unwrap().cycle_time
+    }
+  }
+
+  pub fn set_cycle_time(ns: u64) {
+    unsafe {
+      CPU_STATE.lock().unwrap().cycle_time = ns;
     }
   }
 
