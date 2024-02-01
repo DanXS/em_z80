@@ -56,10 +56,6 @@ fn main() {
         else {
             weak_window.unwrap().set_is_running(!is_running);
             stop();
-            build_disassembly_view(&(weak_window.unwrap())); 
-            build_register_view(&(weak_window.unwrap()));
-            build_status_register_flag_view(&(weak_window.unwrap()));
-            build_memory_view(&(weak_window.unwrap()));
         }
     });
     let weak_window = main_window.as_weak();

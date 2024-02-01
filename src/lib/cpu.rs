@@ -448,15 +448,13 @@ impl Cpu {
   }
 
   pub fn run() {
-    println!("Run called");
-    unsafe { CPU_STATE.lock().unwrap().is_running = true};
-    println!("Breakpoints enabled");
+    unsafe { CPU_STATE.lock().unwrap().is_running = true };
     while unsafe { CPU_STATE.lock().unwrap().is_running } {
       let (text, _) = Self::disassemble(Self::get_pc());
       println!("Step:\n{:04X?}: {} ", Self::get_pc(), text);
       Self::step();
       if unsafe { CPU_STATE.lock().unwrap().breakpoints_enabled } {
-        if unsafe {CPU_STATE.lock().unwrap().breakpoints.contains(&Self::get_pc())} {
+        if unsafe { CPU_STATE.lock().unwrap().breakpoints.contains(&Self::get_pc()) } {
           println!("Hit breakpoint at {:40X?}", &Self::get_pc());
           break;
         }
@@ -465,7 +463,6 @@ impl Cpu {
   }
 
   pub fn stop() {
-    println!("Stop called");
     unsafe { CPU_STATE.lock().unwrap().is_running = false };
   }
 
