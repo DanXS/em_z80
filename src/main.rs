@@ -23,7 +23,7 @@ fn main() {
     build_status_register_flag_view(&main_window);
     build_disassembly_view(&main_window);
     main_window.set_is_running(false);
-    set_enable_breakpoints(true);
+    update_breakpoints_enabled(true);
     main_window.set_enable_breakpoints(true);
     let weak_window = main_window.as_weak();
     main_window.on_step(move || {
@@ -39,12 +39,27 @@ fn main() {
     main_window.on_start_stop(move || {
         let is_running = weak_window.unwrap().get_is_running();
         if !is_running {
-            run();
             weak_window.unwrap().set_is_running(!is_running);
+            let window_copy = weak_window.clone();
+            std::thread::spawn(move || {
+                run();
+                stop();
+                let _ = slint::invoke_from_event_loop(move || {
+                    window_copy.unwrap().set_is_running(false);
+                    build_disassembly_view(&(window_copy.unwrap())); 
+                    build_register_view(&(window_copy.unwrap()));
+                    build_status_register_flag_view(&(window_copy.unwrap()));
+                    build_memory_view(&(window_copy.unwrap()));
+                });
+            });
         }
         else {
-            stop();
             weak_window.unwrap().set_is_running(!is_running);
+            stop();
+            build_disassembly_view(&(weak_window.unwrap())); 
+            build_register_view(&(weak_window.unwrap()));
+            build_status_register_flag_view(&(weak_window.unwrap()));
+            build_memory_view(&(weak_window.unwrap()));
         }
     });
     let weak_window = main_window.as_weak();
@@ -100,7 +115,7 @@ fn main() {
     main_window.on_toggle_enable_breakpoints(move || {
         let is_enabled = weak_window.unwrap().get_enable_breakpoints();
         (weak_window.unwrap()).set_enable_breakpoints(!is_enabled);
-
+        update_breakpoints_enabled(!is_enabled);
         build_disassembly_view(&(weak_window.unwrap()));
     });
     main_window.global::<Logic>().on_has_breakpoint(|line| {

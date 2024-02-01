@@ -1,3 +1,5 @@
+
+use std::sync::Mutex;
 use std::thread;
 use core::time::Duration;
 use crate::util::*;
@@ -8,7 +10,7 @@ use crate::memory::Memory;
 use crate::registers::Register;
 use crate::registers::Flag;
 
-pub static mut REG : Register = Register {
+pub static mut REG : Mutex<Register> = Mutex::new(Register {
   af: 0x0000,
   bc: 0x0000,
   de: 0x0000,
@@ -23,54 +25,54 @@ pub static mut REG : Register = Register {
   pc: 0x0000,
   ir: 0x0000,
   wz: 0x0000
-};
+});
 
 #[inline]
 pub fn read_reg8(reg : &str) -> u8 {
   unsafe {
-    REG.read8(reg)
+    REG.lock().unwrap().read8(reg)
   }
 }
 
 #[inline]
 pub fn read_reg16(reg : &str) -> u16 {
   unsafe {
-    REG.read16(reg)
+    REG.lock().unwrap().read16(reg)
   }
 }
 
 #[inline]
 pub fn write_reg8(reg : &str, val: u8) {
   unsafe {
-    REG.write8(reg, val);
+    REG.lock().unwrap().write8(reg, val);
   }
 }
 
 #[inline]
 pub fn write_reg16(reg : &str, val: u16) {
   unsafe {
-    REG.write16(reg, val);
+    REG.lock().unwrap().write16(reg, val);
   }
 }
 
 #[inline]
 pub fn set_flag(flag: Flag) {
   unsafe {
-    REG.set_flag(flag);
+    REG.lock().unwrap().set_flag(flag);
   }
 }
 
 #[inline]
 pub fn clear_flag(flag: Flag) {
   unsafe {
-    REG.clear_flag(flag);
+    REG.lock().unwrap().clear_flag(flag);
   }
 }
 
 #[inline]
 pub fn is_flag_set(flag: Flag) -> bool {
   unsafe {
-    REG.is_flag_set(flag)
+    REG.lock().unwrap().is_flag_set(flag)
   }
 }
 
@@ -204,19 +206,21 @@ pub fn update_flags_for_subtraction(val1 : u8, val2: u8, res: u16) {
   set_flag(Flag::N);
 }
 
-struct CpuState{
+struct CpuState {
   pub cycle_time: u64,
   pub active_cycles: u8,
-  enable_breakpoints: bool,
-  pub breakpoints: Vec<u16>
+  pub breakpoints: Vec<u16>,
+  pub breakpoints_enabled: bool,
+  pub is_running: bool
 }
 
-static mut CPU_STATE : CpuState = CpuState { 
+static mut CPU_STATE : Mutex<CpuState> = Mutex::new(CpuState { 
   cycle_time: 286,
   active_cycles: 0,
-  enable_breakpoints: false,
-  breakpoints: Vec::new()
-};
+  breakpoints: Vec::new(),
+  breakpoints_enabled: false,
+  is_running: false
+});
 
 pub struct Cpu;
 
@@ -270,51 +274,53 @@ impl Cpu {
 
   pub fn get_cycle_time() -> u64 {
     unsafe {
-      CPU_STATE.cycle_time
+      CPU_STATE.lock().unwrap().cycle_time
     }
   }
 
   pub fn get_acitve_cycles() -> u8 {
     unsafe {
-      CPU_STATE.active_cycles
+      CPU_STATE.lock().unwrap().active_cycles
     }
   }
 
   pub fn set_acitve_cycles(cycles: u8) {
     unsafe {
-      CPU_STATE.active_cycles = cycles;
+      CPU_STATE.lock().unwrap().active_cycles = cycles;
     }
   }
 
   pub fn get_register_view_string() -> String {
-    unsafe { REG.to_string() }
+    unsafe { REG.lock().unwrap().to_string() }
   }
 
   pub fn toggle_breakpoint(addr: u16) {
     unsafe {
-      let mut bps = CPU_STATE.breakpoints.clone();
+      let mut bps = CPU_STATE.lock().unwrap().breakpoints.clone();
       match bps.binary_search(&addr) {
         Ok(pos) => {
             println!("Removing breakpoint {} at position {}", addr, pos);
             bps.remove(pos);
-            CPU_STATE.breakpoints = bps;
+            CPU_STATE.lock().unwrap().breakpoints = bps;
         },
         Err(pos) => {
             println!("Adding breakpoint {} at position {}", addr, pos);
             bps.insert(pos, addr.clone());
-            CPU_STATE.breakpoints = bps;
+            CPU_STATE.lock().unwrap().breakpoints = bps;
         }
       }
     }
   }
 
-  pub fn set_enable_breakpoints(enabled : bool) {
-
+  pub fn update_breakpoints_enabled(enabled : bool) {
+    unsafe {
+      CPU_STATE.lock().unwrap().breakpoints_enabled = enabled;
+    }
   }
 
   pub fn has_breakpoint(addr: u16) -> bool {
     unsafe{
-      CPU_STATE.breakpoints.contains(&addr)
+      CPU_STATE.lock().unwrap().breakpoints.contains(&addr)
     }
   }
 
@@ -443,10 +449,24 @@ impl Cpu {
 
   pub fn run() {
     println!("Run called");
+    unsafe { CPU_STATE.lock().unwrap().is_running = true};
+    println!("Breakpoints enabled");
+    while unsafe { CPU_STATE.lock().unwrap().is_running } {
+      let (text, _) = Self::disassemble(Self::get_pc());
+      println!("Step:\n{:04X?}: {} ", Self::get_pc(), text);
+      Self::step();
+      if unsafe { CPU_STATE.lock().unwrap().breakpoints_enabled } {
+        if unsafe {CPU_STATE.lock().unwrap().breakpoints.contains(&Self::get_pc())} {
+          println!("Hit breakpoint at {:40X?}", &Self::get_pc());
+          break;
+        }
+      }
+    }
   }
 
   pub fn stop() {
     println!("Stop called");
+    unsafe { CPU_STATE.lock().unwrap().is_running = false };
   }
 
 }

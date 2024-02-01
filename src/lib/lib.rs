@@ -120,6 +120,7 @@ pub fn step() {
 }
 
 // Run continiously until a breakpoint is encountered (if enabled) or stop is called
+// Note: should be called asynchronously
 pub fn run() {
   Cpu::run();
 }
@@ -152,6 +153,7 @@ pub fn has_breakpoint(addr: u16) -> bool {
   Cpu::has_breakpoint(addr)
 }
 
-pub fn set_enable_breakpoints(enabled: bool) {
-  Cpu::set_enable_breakpoints(enabled);
+// Enable or disable breakpoints
+pub fn update_breakpoints_enabled(enabled: bool) {
+  Cpu::update_breakpoints_enabled(enabled);
 }
