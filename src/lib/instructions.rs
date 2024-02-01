@@ -694,7 +694,6 @@ impl InstTrait for Instruction {
   }
 
   // ADD Instruction
-  #[allow(unused_assignments)]
   fn add(&self) {
     if self.table == "main" {
       if self.len == 0 {
@@ -704,14 +703,15 @@ impl InstTrait for Instruction {
           let r = self.code & 0x07;
           let src_reg = reg_map[r as usize];
           let val1 = read_reg8("A");
-          let mut val2: u8 = 0x00;
-          if src_reg == "(HL)" {
-            let src_addr = read_reg16("HL");
-            val2 = Memory::read8(src_addr);
-          }
-          else {
-            val2 = read_reg8(src_reg);
-          }
+          let val2 = {
+            if src_reg == "(HL)" {
+              let src_addr = read_reg16("HL");
+              Memory::read8(src_addr)
+            }
+            else {
+              read_reg8(src_reg)
+            }
+          };
           let res = (val1 as u16) + (val2 as u16);
           write_reg8("A", (res & 0xFF) as u8);
           update_flags_for_addition(val1, val2, res);
@@ -762,17 +762,88 @@ impl InstTrait for Instruction {
       }
     }
     else {
-      // ToDo: implement IY/IX
       report_unknown("ADD");
     }
   }
 
+  // ADC Instruction
   fn adc(&self) {
-    report_unknown("ADC");
+    let carry: u8 = {
+      if is_flag_set(Flag::C) { 1 }
+      else { 0 }
+    };
+    if self.table == "main" {
+      if self.len == 0 {
+        if self.code & 0xF8 == 0x88 {
+          // ADC A,r
+          let reg_map = ["B", "C", "D", "E", "H", "L", "(HL)", "A"];
+          let r = self.code & 0x07;
+          let src_reg = reg_map[r as usize];
+          let val1 = read_reg8("A");
+          let val2 = {
+            if src_reg == "(HL)" {
+              let src_addr = read_reg16("HL");
+              Memory::read8(src_addr)
+            }
+            else {
+              read_reg8(src_reg)
+            }
+          };
+          let res = (val1 as u16) + (val2 as u16) + (carry as u16);
+          write_reg8("A", (res & 0xFF) as u8);
+          update_flags_for_addition(val1, u8_plus_carry_wrap(val2, carry), res);
+        }
+        else {
+          report_unknown("ADC");
+        }
+      }
+      else if self.len == 1 {
+        if self.code == 0xCE {
+          // ADC A,n
+          let val1 = read_reg8("A");
+          let val2 = ((self.data >> 8) & 0xFF) as u8;
+          let res = (val1 as u16) + (val2 as u16) + (carry as u16);
+          write_reg8("A", (res & 0xFF) as u8);
+          update_flags_for_addition(val1, u8_plus_carry_wrap(val2, carry), res);
+        }
+        else {
+          report_unknown("ADC");
+        }
+      }
+      else {
+        report_unknown("ADC");
+      }
+    }
+    else if self.table == "ix" {
+      // ADC A, (IX + d)
+      if self.code == 0x8E {
+        let val1 = read_reg8("A");
+        let addr = read_reg16("IX");
+        let src_addr = calc_address_with_offset(addr, self.data as u8);
+        let val2 = Memory::read8(src_addr);
+        let res = (val1 as u16) + (val2 as u16) + (carry as u16);
+        write_reg8("A", (res & 0xFF) as u8);
+        update_flags_for_addition(val1, u8_plus_carry_wrap(val2, carry), res);
+      }
+    }
+    else if self.table == "iy" {
+      // ADC A, (IY + d)
+      if self.code == 0x8E {
+        let val1 = read_reg8("A");
+        let addr = read_reg16("IY");
+        let src_addr = calc_address_with_offset(addr, self.data as u8);
+        let val2 = Memory::read8(src_addr);
+        let res = (val1 as u16) + (val2 as u16) + (carry as u16);
+        write_reg8("A", (res & 0xFF) as u8);
+        update_flags_for_addition(val1, u8_plus_carry_wrap(val2, carry), res);
+      }
+    }
+    else {
+      report_unknown("ADC");
+    }
   }
 
   // SUB Instruction
-  #[allow(unused_assignments)]
   fn sub(&self) {
     if self.table == "main" {
       if self.len == 0 {
@@ -782,14 +853,15 @@ impl InstTrait for Instruction {
           let r = self.code & 0x07;
           let src_reg = reg_map[r as usize];
           let val1 = read_reg8("A");
-          let mut val2: u8 = 0x00;
-          if src_reg == "(HL)" {
-            let src_addr = read_reg16("HL");
-            val2 = Memory::read8(src_addr);
-          }
-          else {
-            val2 = read_reg8(src_reg);
-          }
+          let val2 = {
+            if src_reg == "(HL)" {
+              let src_addr = read_reg16("HL");
+              Memory::read8(src_addr)
+            }
+            else {
+              read_reg8(src_reg)
+            }
+          };
           let res = (val1 as u16) - (val2 as u16);
           write_reg8("A", (res & 0xFF) as u8);
           update_flags_for_subtraction(val1, val2, res);
@@ -840,13 +912,85 @@ impl InstTrait for Instruction {
       }
     }
     else {
-      // ToDo: implement IY/IX
       report_unknown("SUB");
     }
   }
 
+  // SBC Instruction
   fn sbc(&self) {
-    report_unknown("SBC");
+    let carry: u8 = {
+      if is_flag_set(Flag::C) { 1 }
+      else { 0 }
+    };
+    if self.table == "main" {
+      if self.len == 0 {
+        if self.code & 0xF8 == 0x98 {
+          // SBC A,r
+          let reg_map = ["B", "C", "D", "E", "H", "L", "(HL)", "A"];
+          let r = self.code & 0x07;
+          let src_reg = reg_map[r as usize];
+          let val1 = read_reg8("A");
+          let val2 = {
+            if src_reg == "(HL)" {
+              let src_addr = read_reg16("HL");
+              Memory::read8(src_addr)
+            }
+            else {
+              read_reg8(src_reg)
+            }
+          };
+          let res = (val1 as u16) - (val2 as u16) - (carry as u16);
+          write_reg8("A", (res & 0xFF) as u8);
+          update_flags_for_subtraction(val1, u8_minus_carry_wrap(val2, carry), res);
+        }
+        else {
+          report_unknown("SBC");
+        }
+      }
+      else if self.len == 1 {
+        if self.code == 0xDE {
+          // SBC A,n
+          let val1 = read_reg8("A");
+          let val2 = ((self.data >> 8) & 0xFF) as u8;
+          let res = (val1 as u16) - (val2 as u16) - (carry as u16);
+          write_reg8("A", (res & 0xFF) as u8);
+          update_flags_for_subtraction(val1, u8_minus_carry_wrap(val2, carry), res);
+        }
+        else {
+          report_unknown("SBC");
+        }
+      }
+      else {
+        report_unknown("SBC");
+      }
+    }
+    else if self.table == "ix" {
+      // SBC A, (IX + d)
+      if self.code == 0x9E {
+        let val1 = read_reg8("A");
+        let addr = read_reg16("IX");
+        let src_addr = calc_address_with_offset(addr, self.data as u8);
+        let val2 = Memory::read8(src_addr);
+        let res = (val1 as u16) - (val2 as u16) - (carry as u16);
+        write_reg8("A", (res & 0xFF) as u8);
+        update_flags_for_subtraction(val1, u8_minus_carry_wrap(val2, carry), res);
+      }
+    }
+    else if self.table == "iy" {
+      // SBC A, (IY + d)
+      if self.code == 0x9E {
+        let val1 = read_reg8("A");
+        let addr = read_reg16("IY");
+        let src_addr = calc_address_with_offset(addr, self.data as u8);
+        let val2 = Memory::read8(src_addr);
+        let res = (val1 as u16) - (val2 as u16) - (carry as u16);
+        write_reg8("A", (res & 0xFF) as u8);
+        update_flags_for_subtraction(val1, u8_minus_carry_wrap(val2, carry), res);
+      }
+    }
+    else {
+      report_unknown("SBC");
+    }
   }
 
   fn and(&self) {
