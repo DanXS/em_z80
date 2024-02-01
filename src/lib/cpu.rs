@@ -460,6 +460,7 @@ impl Cpu {
         }
       }
     }
+    unsafe { CPU_STATE.lock().unwrap().is_running = false };
   }
 
   pub fn stop() {

@@ -43,7 +43,6 @@ fn main() {
             let window_copy = weak_window.clone();
             std::thread::spawn(move || {
                 run();
-                stop();
                 let _ = slint::invoke_from_event_loop(move || {
                     window_copy.unwrap().set_is_running(false);
                     build_disassembly_view(&(window_copy.unwrap())); 
