@@ -916,9 +916,9 @@ impl InstTrait for Instruction {
               read_reg8(src_reg)
             }
           };
-          let res = (val1 as u16) - (val2 as u16);
+          let res = (val1 as i16) - (val2 as i16);
           write_reg8("A", (res & 0xFF) as u8);
-          update_flags_for_subtraction8(val1, val2, res);
+          update_flags_for_subtraction8(val1, val2, res as u16);
         }
         else {
           report_unknown("SUB");
@@ -929,9 +929,9 @@ impl InstTrait for Instruction {
           // SUB A,n
           let val1 = read_reg8("A");
           let val2 = ((self.data >> 8) & 0xFF) as u8;
-          let res = (val1 as u16) - (val2 as u16);
+          let res = (val1 as i16) - (val2 as i16);
           write_reg8("A", (res & 0xFF) as u8);
-          update_flags_for_subtraction8(val1, val2, res);
+          update_flags_for_subtraction8(val1, val2, res as u16);
         }
         else {
           report_unknown("SUB");
@@ -948,9 +948,9 @@ impl InstTrait for Instruction {
         let addr = read_reg16("IX");
         let src_addr = calc_address_with_offset(addr, self.data as u8);
         let val2 = Memory::read8(src_addr);
-        let res = (val1 as u16) - (val2 as u16);
+        let res = (val1 as i16) - (val2 as i16);
         write_reg8("A", (res & 0xFF) as u8);
-        update_flags_for_subtraction8(val1, val2, res);
+        update_flags_for_subtraction8(val1, val2, res as u16);
       }
     }
     else if self.table == "iy" {
@@ -960,9 +960,9 @@ impl InstTrait for Instruction {
         let addr = read_reg16("IY");
         let src_addr = calc_address_with_offset(addr, self.data as u8);
         let val2 = Memory::read8(src_addr);
-        let res = (val1 as u16) - (val2 as u16);
+        let res = (val1 as i16) - (val2 as i16);
         write_reg8("A", (res & 0xFF) as u8);
-        update_flags_for_subtraction8(val1, val2, res);
+        update_flags_for_subtraction8(val1, val2, res as u16);
       }
     }
     else {
@@ -993,9 +993,9 @@ impl InstTrait for Instruction {
               read_reg8(src_reg)
             }
           };
-          let res = (val1 as u16) - (val2 as u16) - (carry as u16);
+          let res = (val1 as i16) - (val2 as i16) - (carry as i16);
           write_reg8("A", (res & 0xFF) as u8);
-          update_flags_for_subtraction8(val1, u8_plus_carry_wrap(val2, carry), res);
+          update_flags_for_subtraction8(val1, u8_plus_carry_wrap(val2, carry), res as u16);
         }
         else {
           report_unknown("SBC");
@@ -1006,9 +1006,9 @@ impl InstTrait for Instruction {
           // SBC A,n
           let val1 = read_reg8("A");
           let val2 = ((self.data >> 8) & 0xFF) as u8;
-          let res = (val1 as u16) - (val2 as u16) - (carry as u16);
+          let res = (val1 as i16) - (val2 as i16) - (carry as i16);
           write_reg8("A", (res & 0xFF) as u8);
-          update_flags_for_subtraction8(val1, u8_plus_carry_wrap(val2, carry), res);
+          update_flags_for_subtraction8(val1, u8_plus_carry_wrap(val2, carry), res as u16);
         }
         else {
           report_unknown("SBC");
@@ -1026,9 +1026,9 @@ impl InstTrait for Instruction {
         let src_reg = reg_map[rr as usize];
         let val1 = read_reg16("HL");
         let val2 = read_reg16(src_reg);
-        let res = (val1 as u32) - (val2 as u32) - (carry as u32);
+        let res = (val1 as i32) - (val2 as i32) - (carry as i32);
         write_reg16("HL", (res & 0xFFFF) as u16);
-        update_flags_for_subtraction_with_carry16(val1, val2, res);
+        update_flags_for_subtraction_with_carry16(val1, val2, res as u32);
       }
       else {
         report_unknown("ADC");
@@ -1041,9 +1041,9 @@ impl InstTrait for Instruction {
         let addr = read_reg16("IX");
         let src_addr = calc_address_with_offset(addr, self.data as u8);
         let val2 = Memory::read8(src_addr);
-        let res = (val1 as u16) - (val2 as u16) - (carry as u16);
+        let res = (val1 as i16) - (val2 as i16) - (carry as i16);
         write_reg8("A", (res & 0xFF) as u8);
-        update_flags_for_subtraction8(val1, u8_plus_carry_wrap(val2, carry), res);
+        update_flags_for_subtraction8(val1, u8_plus_carry_wrap(val2, carry), res as u16);
       }
     }
     else if self.table == "iy" {
@@ -1053,9 +1053,9 @@ impl InstTrait for Instruction {
         let addr = read_reg16("IY");
         let src_addr = calc_address_with_offset(addr, self.data as u8);
         let val2 = Memory::read8(src_addr);
-        let res = (val1 as u16) - (val2 as u16) - (carry as u16);
+        let res = (val1 as i16) - (val2 as i16) - (carry as i16);
         write_reg8("A", (res & 0xFF) as u8);
-        update_flags_for_subtraction8(val1, u8_plus_carry_wrap(val2, carry), res);
+        update_flags_for_subtraction8(val1, u8_plus_carry_wrap(val2, carry), res as u16);
       }
     }
     else {
@@ -1063,16 +1063,247 @@ impl InstTrait for Instruction {
     }
   }
 
+  // AND Instruction
   fn and(&self) {
-   report_unknown("AND");
+    if self.table == "main" {
+      if self.len == 0 {
+        if self.code & 0xF8 == 0xA0 {
+          // AND r
+          let reg_map = ["B", "C", "D", "E", "H", "L", "(HL)", "A"];
+          let r = self.code & 0x07;
+          let src_reg = reg_map[r as usize];
+          let val = read_reg8("A");
+          if src_reg == "(HL)" {
+            // AND (HL)
+            let src_addr = read_reg16("HL");
+            let src_val = Memory::read8(src_addr);
+            let res = val & src_val;
+            write_reg8("A", res);
+            update_flags_for_logical_op(res, true);
+          }
+          else {
+            let src_val = read_reg8(src_reg);
+            let res = val & src_val;
+            write_reg8("A", res);
+            update_flags_for_logical_op(res, true);
+          }
+        }
+        else {
+          report_unknown("AND");
+        }
+      }
+      else if self.len == 1 {
+        if self.code == 0xE6 {
+          // AND n
+          let src_val = (self.data & 0xff) as u8;
+          let val = read_reg8("A");
+          let res = val & src_val;
+          write_reg8("A", res);
+          update_flags_for_logical_op(res, true);
+        }
+        else {
+          report_unknown("AND");
+        }
+      }
+      else {
+        report_unknown("AND");
+      }
+    }
+    else if self.table == "ix" && self.len == 1 {
+      if self.code == 0xA6 {
+        // AND IX+d
+        let val = read_reg8("A");
+        let addr = read_reg16("IX");
+        let src_addr = calc_address_with_offset(addr, self.data as u8);
+        let src_val = Memory::read8(src_addr);
+        let res = val & src_val;
+        write_reg8("A", res);
+        update_flags_for_logical_op(res, true);
+      }
+      else {
+        report_unknown("AND");
+      }
+    }
+    else if self.table == "iy" && self.len == 1 {
+      if self.code == 0xA6 {
+        // AND IY+d
+        let val = read_reg8("A");
+        let addr = read_reg16("IY");
+        let src_addr = calc_address_with_offset(addr, self.data as u8);
+        let src_val = Memory::read8(src_addr);
+        let res = val & src_val;
+        write_reg8("A", res);
+        update_flags_for_logical_op(res, true);
+      }
+      else {
+        report_unknown("AND");
+      }
+    }
+    else {
+      report_unknown("AND");
+    }
   }
 
+  // OR Instruction
   fn or(&self) {
-   report_unknown("OR");
+    if self.table == "main" {
+      if self.len == 0 {
+        if self.code & 0xF8 == 0xB0 {
+          // OR r
+          let reg_map = ["B", "C", "D", "E", "H", "L", "(HL)", "A"];
+          let r = self.code & 0x07;
+          let src_reg = reg_map[r as usize];
+          let val = read_reg8("A");
+          if src_reg == "(HL)" {
+            // OR (HL)
+            let src_addr = read_reg16("HL");
+            let src_val = Memory::read8(src_addr);
+            let res = val | src_val;
+            write_reg8("A", res);
+            update_flags_for_logical_op(res, false);
+          }
+          else {
+            let src_val = read_reg8(src_reg);
+            let res = val | src_val;
+            write_reg8("A", res);
+            update_flags_for_logical_op(res, false);
+          }
+        }
+        else {
+          report_unknown("OR");
+        }
+      }
+      else if self.len == 1 {
+        if self.code == 0xF6 {
+          // OR n
+          let src_val = (self.data & 0xff) as u8;
+          let val = read_reg8("A");
+          let res = val | src_val;
+          write_reg8("A", res);
+          update_flags_for_logical_op(res, false);
+        }
+        else {
+          report_unknown("OR");
+        }
+      }
+      else {
+        report_unknown("OR");
+      }
+    }
+    else if self.table == "ix" && self.len == 1 {
+      if self.code == 0xB6 {
+        // OR IX+d
+        let val = read_reg8("A");
+        let addr = read_reg16("IX");
+        let src_addr = calc_address_with_offset(addr, self.data as u8);
+        let src_val = Memory::read8(src_addr);
+        let res = val | src_val;
+        write_reg8("A", res);
+        update_flags_for_logical_op(res, false);
+      }
+      else {
+        report_unknown("OR");
+      }
+    }
+    else if self.table == "iy" && self.len == 1 {
+      if self.code == 0xB6 {
+        // OR IY+d
+        let val = read_reg8("A");
+        let addr = read_reg16("IY");
+        let src_addr = calc_address_with_offset(addr, self.data as u8);
+        let src_val = Memory::read8(src_addr);
+        let res = val | src_val;
+        write_reg8("A", res);
+        update_flags_for_logical_op(res, false);
+      }
+      else {
+        report_unknown("OR");
+      }
+    }
+    else {
+      report_unknown("OR");
+    }
   }
 
+  // XOR Instruction
   fn xor(&self) {
-   report_unknown("XOR");
+    if self.table == "main" {
+      if self.len == 0 {
+        if self.code & 0xF8 == 0xA8 {
+          // XOR r
+          let reg_map = ["B", "C", "D", "E", "H", "L", "(HL)", "A"];
+          let r = self.code & 0x07;
+          let src_reg = reg_map[r as usize];
+          let val = read_reg8("A");
+          if src_reg == "(HL)" {
+            // XOR (HL)
+            let src_addr = read_reg16("HL");
+            let src_val = Memory::read8(src_addr);
+            let res = val ^ src_val;
+            write_reg8("A", res);
+            update_flags_for_logical_op(res, false);
+          }
+          else {
+            let src_val = read_reg8(src_reg);
+            let res = val ^ src_val;
+            write_reg8("A", res);
+            update_flags_for_logical_op(res, false);
+          }
+        }
+        else {
+          report_unknown("XOR");
+        }
+      }
+      else if self.len == 1 {
+        if self.code == 0xEE {
+          // XOR n
+          let src_val = (self.data & 0xff) as u8;
+          let val = read_reg8("A");
+          let res = val ^ src_val;
+          write_reg8("A", res);
+          update_flags_for_logical_op(res, false);
+        }
+        else {
+          report_unknown("XOR");
+        }
+      }
+      else {
+        report_unknown("XOR");
+      }
+    }
+    else if self.table == "ix" && self.len == 1 {
+      if self.code == 0xAE {
+        // XOR IX+d
+        let val = read_reg8("A");
+        let addr = read_reg16("IX");
+        let src_addr = calc_address_with_offset(addr, self.data as u8);
+        let src_val = Memory::read8(src_addr);
+        let res = val ^ src_val;
+        write_reg8("A", res);
+        update_flags_for_logical_op(res, false);
+      }
+      else {
+        report_unknown("XOR");
+      }
+    }
+    else if self.table == "iy" && self.len == 1 {
+      if self.code == 0xAE {
+        // XOR IY+d
+        let val = read_reg8("A");
+        let addr = read_reg16("IY");
+        let src_addr = calc_address_with_offset(addr, self.data as u8);
+        let src_val = Memory::read8(src_addr);
+        let res = val ^ src_val;
+        write_reg8("A", res);
+        update_flags_for_logical_op(res, false);
+      }
+      else {
+        report_unknown("XOR");
+      }
+    }
+    else {
+      report_unknown("XOR");
+    }
   }
 
   fn cp(&self) {
@@ -1454,6 +1685,8 @@ impl InstTrait for Instruction {
     report_unknown("CPD");
   }
 
+  // The following are unsupported on the z80, but are legal for the z180 should we wish
+  // to implement them later, keeping stubs to warn user if encountered
   fn in0(&self) {
     report_not_supported("IN0");
   }
