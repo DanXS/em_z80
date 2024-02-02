@@ -135,7 +135,7 @@ pub fn update_flags_for_dec(val : u8, dec_val : u8) {
 }
 
 #[inline]
-pub fn update_flags_for_addition(val1 : u8, val2: u8, res: u16) {
+pub fn update_flags_for_addition8(val1 : u8, val2: u8, res: u16) {
   if res & 0x10 == 0x10  {
     set_flag(Flag::S);
   }
@@ -160,8 +160,8 @@ pub fn update_flags_for_addition(val1 : u8, val2: u8, res: u16) {
   else {
     clear_flag(Flag::C);
   }
-  if (val1 & 0x10 == 0x10) && (val2 & 0x10 == 0x10) && (res & 0x10 == 0x00) ||
-     (val1 & 0x10 == 0x00) && (val2 & 0x10 == 0x00) && (res & 0x10 == 0x10) {
+  if (val1 & 0x80 == 0x80) && (val2 & 0x80 == 0x80) && (res & 0x80 == 0x00) ||
+     (val1 & 0x80 == 0x00) && (val2 & 0x80 == 0x00) && (res & 0x80 == 0x80) {
     set_flag(Flag::PV);
   }
   else {
@@ -171,7 +171,7 @@ pub fn update_flags_for_addition(val1 : u8, val2: u8, res: u16) {
 }
 
 #[inline]
-pub fn update_flags_for_subtraction(val1 : u8, val2: u8, res: u16) {
+pub fn update_flags_for_subtraction8(val1 : u8, val2: u8, res: u16) {
   if res & 0x10 == 0x10  {
     set_flag(Flag::S);
   }
@@ -196,8 +196,103 @@ pub fn update_flags_for_subtraction(val1 : u8, val2: u8, res: u16) {
   else {
     clear_flag(Flag::C);
   }
-  if (val1 & 0x10 == 0x10) && (val2 & 0x10 == 0x00) && (res & 0x10 == 0x00) ||
-     (val1 & 0x10 == 0x00) && (val2 & 0x10 == 0x10) && (res & 0x10 == 0x10) {
+  if (val1 & 0x80 == 0x80) && (val2 & 0x80 == 0x00) && (res & 0x80 == 0x00) ||
+     (val1 & 0x80 == 0x00) && (val2 & 0x80 == 0x80) && (res & 0x80 == 0x80) {
+    set_flag(Flag::PV);
+  }
+  else {
+    clear_flag(Flag::PV);
+  }
+  set_flag(Flag::N);
+}
+
+#[inline]
+pub fn update_flags_for_addition16(val1: u16, res: u32) {
+  if res & 0x10000 == 0x10000 {
+    set_flag(Flag::C);
+  }
+  else {
+    clear_flag(Flag::C);
+  }
+  if res == 0 {
+    set_flag(Flag::Z);
+  }
+  else {
+    clear_flag(Flag::Z);
+  }
+  if (val1 & 0xC000 == 0x4000) && (res & 0x8000 != 0x8000) {
+    set_flag(Flag::H);
+  }
+  else {
+    clear_flag(Flag::H);
+  }
+  clear_flag(Flag::N);
+}
+
+#[inline]
+pub fn update_flags_for_addition_with_carry16(val1: u16, val2: u16, res: u32) {
+  if res & 0x8000 == 0x8000 {
+    set_flag(Flag::S);
+  }
+  else {
+    clear_flag(Flag::S);
+  }
+  if res == 0 {
+    set_flag(Flag::Z);
+  }
+  else {
+    clear_flag(Flag::Z);
+  }
+  if res & 0x10000 == 0x10000 {
+    set_flag(Flag::C);
+  }
+  else {
+    clear_flag(Flag::C);
+  }
+  if (val1 & 0xC000 == 0x4000) && (res & 0x8000 == 0x8000) {
+    set_flag(Flag::H);
+  }
+  else {
+    clear_flag(Flag::H);
+  }
+  if (val1 & 0x8000 == 0x8000) && (val2 & 0x8000 == 0x8000) && (res & 0x8000 == 0x0000) ||
+     (val1 & 0x8000 == 0x0000) && (val2 & 0x8000 == 0x0000) && (res & 0x8000 == 0x8000) {
+    set_flag(Flag::PV);
+  }
+  else {
+    clear_flag(Flag::PV);
+  }
+  clear_flag(Flag::N);
+}
+
+#[inline]
+pub fn update_flags_for_subtraction_with_carry16(val1 : u16, val2: u16, res : u32) {
+  if res & 0x8000 == 0x8000 {
+    set_flag(Flag::S);
+  }
+  else {
+    clear_flag(Flag::S);
+  }
+  if res == 0 {
+    set_flag(Flag::Z);
+  }
+  else {
+    clear_flag(Flag::Z);
+  }
+  if res & 0x10000 == 0x10000 {
+    set_flag(Flag::C);
+  }
+  else {
+    clear_flag(Flag::C);
+  }
+  if (val1 & 0xC000 == 08000) && (res & 0x4000 == 0x4000) {
+    set_flag(Flag::H);
+  }
+  else {
+    clear_flag(Flag::H);
+  }
+  if (val1 & 0x8000 == 0x8000) && (val2 & 0x8000 == 0x0000) && (res & 0x8000 == 0x0000) ||
+     (val1 & 0x8000 == 0x0000) && (val2 & 0x8000 == 0x8000) && (res & 0x8000 == 0x8000) {
     set_flag(Flag::PV);
   }
   else {

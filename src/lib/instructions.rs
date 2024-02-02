@@ -714,7 +714,18 @@ impl InstTrait for Instruction {
           };
           let res = (val1 as u16) + (val2 as u16);
           write_reg8("A", (res & 0xFF) as u8);
-          update_flags_for_addition(val1, val2, res);
+          update_flags_for_addition8(val1, val2, res);
+        }
+        else if self.code & 0xCF == 0x09 {
+          // ADD HL,rr
+          let reg_map = ["BE", "DE", "HL", "SP"];
+          let rr = (self.code & 0x30) >> 4;
+          let src_reg = reg_map[rr as usize];
+          let val1 = read_reg16("HL");
+          let val2 = read_reg16(src_reg);
+          let res = (val1 as u32) + (val2 as u32);
+          write_reg16("HL", (res & 0xFFFF) as u16);
+          update_flags_for_addition16(val1, res);
         }
         else {
           report_unknown("ADD");
@@ -727,7 +738,7 @@ impl InstTrait for Instruction {
           let val2 = ((self.data >> 8) & 0xFF) as u8;
           let res = (val1 as u16) + (val2 as u16);
           write_reg8("A", (res & 0xFF) as u8);
-          update_flags_for_addition(val1, val2, res);
+          update_flags_for_addition8(val1, val2, res);
         }
         else {
           report_unknown("ADD");
@@ -738,27 +749,53 @@ impl InstTrait for Instruction {
       }
     }
     else if self.table == "ix" {
-      // ADD A, (IX + d)
       if self.code == 0x86 {
+        // ADD A, (IX + d)
         let val1 = read_reg8("A");
         let addr = read_reg16("IX");
         let src_addr = calc_address_with_offset(addr, self.data as u8);
         let val2 = Memory::read8(src_addr);
         let res = (val1 as u16) + (val2 as u16);
         write_reg8("A", (res & 0xFF) as u8);
-        update_flags_for_addition(val1, val2, res);
+        update_flags_for_addition8(val1, val2, res);
+      }
+      else if self.code & 0xCF == 0x09 {
+        // ADD IX, rr
+        let val1 = read_reg16("IX");
+        let reg_map = ["BC", "DE", "IX", "SP"];
+        let rr = self.code & 0x30;
+        let val2 = read_reg16(reg_map[rr as usize]);
+        let res = (val1 as u32) + (val2 as u32);
+        write_reg16("IX", (res & 0xFFFF) as u16);
+        update_flags_for_addition16(val1, res);
+      }
+      else {
+        report_unknown("ADD");
       }
     }
     else if self.table == "iy" {
-      // ADD A, (IY + d)
       if self.code == 0x86 {
+        // ADD A, (IY + d)
         let val1 = read_reg8("A");
         let addr = read_reg16("IY");
         let src_addr = calc_address_with_offset(addr, self.data as u8);
         let val2 = Memory::read8(src_addr);
         let res = (val1 as u16) + (val2 as u16);
         write_reg8("A", (res & 0xFF) as u8);
-        update_flags_for_addition(val1, val2, res);
+        update_flags_for_addition8(val1, val2, res);
+      }
+      else if self.code & 0xCF == 0x09 {
+        // ADD IY, rr
+        let val1 = read_reg16("IY");
+        let reg_map = ["BC", "DE", "IY", "SP"];
+        let rr = self.code & 0x30;
+        let val2 = read_reg16(reg_map[rr as usize]);
+        let res = (val1 as u32) + (val2 as u32);
+        write_reg16("IY", (res & 0xFFFF) as u16);
+        update_flags_for_addition16(val1, res);
+      }
+      else {
+        report_unknown("ADD");
       }
     }
     else {
@@ -791,7 +828,7 @@ impl InstTrait for Instruction {
           };
           let res = (val1 as u16) + (val2 as u16) + (carry as u16);
           write_reg8("A", (res & 0xFF) as u8);
-          update_flags_for_addition(val1, u8_plus_carry_wrap(val2, carry), res);
+          update_flags_for_addition8(val1, u8_plus_carry_wrap(val2, carry), res);
         }
         else {
           report_unknown("ADC");
@@ -804,11 +841,27 @@ impl InstTrait for Instruction {
           let val2 = ((self.data >> 8) & 0xFF) as u8;
           let res = (val1 as u16) + (val2 as u16) + (carry as u16);
           write_reg8("A", (res & 0xFF) as u8);
-          update_flags_for_addition(val1, u8_plus_carry_wrap(val2, carry), res);
+          update_flags_for_addition8(val1, u8_plus_carry_wrap(val2, carry), res);
         }
         else {
           report_unknown("ADC");
         }
+      }
+      else {
+        report_unknown("ADC");
+      }
+    }
+    else if self.table == "misc" {
+      if self.code & 0xCF == 0x4A {
+        // ADC HL,rr
+        let reg_map = ["BE", "DE", "HL", "SP"];
+        let rr = (self.code & 0x30) >> 4;
+        let src_reg = reg_map[rr as usize];
+        let val1 = read_reg16("HL");
+        let val2 = read_reg16(src_reg);
+        let res = (val1 as u32) + (val2 as u32) + (carry as u32);
+        write_reg16("HL", (res & 0xFFFF) as u16);
+        update_flags_for_addition_with_carry16(val1, val2, res);
       }
       else {
         report_unknown("ADC");
@@ -823,7 +876,7 @@ impl InstTrait for Instruction {
         let val2 = Memory::read8(src_addr);
         let res = (val1 as u16) + (val2 as u16) + (carry as u16);
         write_reg8("A", (res & 0xFF) as u8);
-        update_flags_for_addition(val1, u8_plus_carry_wrap(val2, carry), res);
+        update_flags_for_addition8(val1, u8_plus_carry_wrap(val2, carry), res);
       }
     }
     else if self.table == "iy" {
@@ -835,7 +888,7 @@ impl InstTrait for Instruction {
         let val2 = Memory::read8(src_addr);
         let res = (val1 as u16) + (val2 as u16) + (carry as u16);
         write_reg8("A", (res & 0xFF) as u8);
-        update_flags_for_addition(val1, u8_plus_carry_wrap(val2, carry), res);
+        update_flags_for_addition8(val1, u8_plus_carry_wrap(val2, carry), res);
       }
     }
     else {
@@ -864,7 +917,7 @@ impl InstTrait for Instruction {
           };
           let res = (val1 as u16) - (val2 as u16);
           write_reg8("A", (res & 0xFF) as u8);
-          update_flags_for_subtraction(val1, val2, res);
+          update_flags_for_subtraction8(val1, val2, res);
         }
         else {
           report_unknown("SUB");
@@ -877,7 +930,7 @@ impl InstTrait for Instruction {
           let val2 = ((self.data >> 8) & 0xFF) as u8;
           let res = (val1 as u16) - (val2 as u16);
           write_reg8("A", (res & 0xFF) as u8);
-          update_flags_for_subtraction(val1, val2, res);
+          update_flags_for_subtraction8(val1, val2, res);
         }
         else {
           report_unknown("SUB");
@@ -896,7 +949,7 @@ impl InstTrait for Instruction {
         let val2 = Memory::read8(src_addr);
         let res = (val1 as u16) - (val2 as u16);
         write_reg8("A", (res & 0xFF) as u8);
-        update_flags_for_subtraction(val1, val2, res);
+        update_flags_for_subtraction8(val1, val2, res);
       }
     }
     else if self.table == "iy" {
@@ -908,7 +961,7 @@ impl InstTrait for Instruction {
         let val2 = Memory::read8(src_addr);
         let res = (val1 as u16) - (val2 as u16);
         write_reg8("A", (res & 0xFF) as u8);
-        update_flags_for_subtraction(val1, val2, res);
+        update_flags_for_subtraction8(val1, val2, res);
       }
     }
     else {
@@ -941,7 +994,7 @@ impl InstTrait for Instruction {
           };
           let res = (val1 as u16) - (val2 as u16) - (carry as u16);
           write_reg8("A", (res & 0xFF) as u8);
-          update_flags_for_subtraction(val1, u8_minus_carry_wrap(val2, carry), res);
+          update_flags_for_subtraction8(val1, u8_plus_carry_wrap(val2, carry), res);
         }
         else {
           report_unknown("SBC");
@@ -954,7 +1007,7 @@ impl InstTrait for Instruction {
           let val2 = ((self.data >> 8) & 0xFF) as u8;
           let res = (val1 as u16) - (val2 as u16) - (carry as u16);
           write_reg8("A", (res & 0xFF) as u8);
-          update_flags_for_subtraction(val1, u8_minus_carry_wrap(val2, carry), res);
+          update_flags_for_subtraction8(val1, u8_plus_carry_wrap(val2, carry), res);
         }
         else {
           report_unknown("SBC");
@@ -962,6 +1015,22 @@ impl InstTrait for Instruction {
       }
       else {
         report_unknown("SBC");
+      }
+    }
+    else if self.table == "misc" {
+      if self.code & 0xCF == 0x42 {
+        // SDC HL,rr
+        let reg_map = ["BE", "DE", "HL", "SP"];
+        let rr = (self.code & 0x30) >> 4;
+        let src_reg = reg_map[rr as usize];
+        let val1 = read_reg16("HL");
+        let val2 = read_reg16(src_reg);
+        let res = (val1 as u32) - (val2 as u32) - (carry as u32);
+        write_reg16("HL", (res & 0xFFFF) as u16);
+        update_flags_for_subtraction_with_carry16(val1, val2, res);
+      }
+      else {
+        report_unknown("ADC");
       }
     }
     else if self.table == "ix" {
@@ -973,7 +1042,7 @@ impl InstTrait for Instruction {
         let val2 = Memory::read8(src_addr);
         let res = (val1 as u16) - (val2 as u16) - (carry as u16);
         write_reg8("A", (res & 0xFF) as u8);
-        update_flags_for_subtraction(val1, u8_minus_carry_wrap(val2, carry), res);
+        update_flags_for_subtraction8(val1, u8_plus_carry_wrap(val2, carry), res);
       }
     }
     else if self.table == "iy" {
@@ -985,7 +1054,7 @@ impl InstTrait for Instruction {
         let val2 = Memory::read8(src_addr);
         let res = (val1 as u16) - (val2 as u16) - (carry as u16);
         write_reg8("A", (res & 0xFF) as u8);
-        update_flags_for_subtraction(val1, u8_minus_carry_wrap(val2, carry), res);
+        update_flags_for_subtraction8(val1, u8_plus_carry_wrap(val2, carry), res);
       }
     }
     else {
