@@ -1,3 +1,4 @@
+use core::panic;
 use std::fmt;
 
 pub enum Flag {
@@ -18,6 +19,17 @@ pub fn bit_mask_for_flag(flag: Flag) -> u8 {
     Flag::Z => 0x40,
     Flag::S => 0x80
   }
+}
+
+pub enum ConditionCode {
+  NZ = 0x00,  // 000 Non-Zero (NZ) Z
+  Z  = 0x01,  // 001 Zero (Z) Z
+  NC = 0x02,  // 010 Non Carry (NC) C
+  C  = 0x03,  // 011 Carry (C) Z
+  PO = 0x04,  // 100 Parity Odd (PO) P/V
+  PE = 0x05,  // 101 Parity Even (PE) P/V
+  P  = 0x06,  // 110 Sign Positive (P) S
+  M  = 0x07   // 111 Sign Negative (M) S
 }
 
 pub struct Register {
@@ -205,6 +217,32 @@ impl Register {
     let f_reg = (self.af & 0xFF) as u8;
     f_reg & bit_mask_for_flag(flag) != 0x00
   }
-  
+
+  pub fn condition_code_for(val : u8) -> ConditionCode {
+    match val {
+      0 => ConditionCode::NZ,
+      1 => ConditionCode::Z,
+      2 => ConditionCode::NC,
+      3 => ConditionCode::C,
+      4 => ConditionCode::PO,
+      5 => ConditionCode::PE,
+      6 => ConditionCode::P,
+      7 => ConditionCode::M,
+      _ => panic!("Condition code not found, should be a value between 0 and 7")
+    }
+  }
+
+  pub fn check_condition(cc : ConditionCode, flags: u8) -> bool {
+    match cc {
+      ConditionCode::NZ => bit_mask_for_flag(Flag::Z) & flags == 0,
+      ConditionCode::Z  => bit_mask_for_flag(Flag::Z) & flags != 0,
+      ConditionCode::NC => bit_mask_for_flag(Flag::C) & flags == 0,
+      ConditionCode::C  => bit_mask_for_flag(Flag::C) & flags != 0,
+      ConditionCode::PO => bit_mask_for_flag(Flag::PV) & flags == 0,
+      ConditionCode::PE => bit_mask_for_flag(Flag::PV) & flags != 0,
+      ConditionCode::P  => bit_mask_for_flag(Flag::S) & flags == 0,
+      ConditionCode::M  => bit_mask_for_flag(Flag::S) & flags != 0
+    }
+  }
 }
 

@@ -3,6 +3,7 @@ use crate::memory::Memory;
 use crate::registers::Flag;
 use crate::cpu::Cpu;
 use crate::cpu::*;
+use crate::registers::Register;
 use crate::util::*;
 
 #[inline]
@@ -1171,20 +1172,10 @@ impl InstTrait for Instruction {
       else if self.code & 0xC7 == 0xC2 {
         // JP cc,nn
         let dst_addr = self.data;
-        let cc = (self.code & 0x38) >> 3;
-        let cc_map = ["NZ", "Z", "NC", "C", "PO", "PE", "P", "M"];
-        let cc_str = cc_map[cc as usize];
-        let should_jump = match cc_str {
-          "NZ" => { !is_flag_set(Flag::Z) },
-          "Z" => { is_flag_set(Flag::Z) },
-          "NC" => { !is_flag_set(Flag::C) },
-          "C" => { is_flag_set(Flag::C) },
-          "PO" => { is_flag_set(Flag::PV) },
-          "PE" => { !is_flag_set(Flag::PV) },
-          "P" => { is_flag_set(Flag::S) },
-          "M" => { !is_flag_set(Flag::S) },
-          _ => { false }
-        };
+        let cc_val = (self.code & 0x38) >> 3;
+        let cc = Register::condition_code_for(cc_val);
+        let flags = read_reg8("F");
+        let should_jump = Register::check_condition(cc, flags);
         if should_jump {
           write_reg16("PC", dst_addr);
           Cpu::set_acitve_cycles(self.cycles.0);
@@ -1260,16 +1251,91 @@ impl InstTrait for Instruction {
     }
   }
 
+  // CALL Instruction
   fn call(&self) {
-    report_unknown("CALL");
+    if self.table == "main" {
+      if self.len == 2 {
+        if self.code == 0xCD { 
+          // CALL nn
+          let val = read_reg16("PC");
+          let mut addr = read_reg16("SP");
+          addr = ((addr as i32) - 2) as u16;
+          write_reg16("SP", addr);
+          Memory::write16(addr, val);
+          let dst_addr = self.data;
+          write_reg16("PC", dst_addr);
+        }
+        else if self.code & 0xC7 == 0xC4 {
+          // CALL cc,nn
+          let cc_val = (self.code & 0x38) >> 3;
+          let cc = Register::condition_code_for(cc_val);
+          let flags = read_reg8("F");
+          let should_call = Register::check_condition(cc, flags);
+          if should_call {
+            let val = read_reg16("PC");
+            let mut addr = read_reg16("SP");
+            addr = ((addr as i32) - 2) as u16;
+            write_reg16("SP", addr);
+            Memory::write16(addr, val);
+            let dst_addr = self.data;
+            write_reg16("PC", dst_addr);
+            Cpu::set_acitve_cycles(self.cycles.0);
+          }
+          else {
+            Cpu::set_acitve_cycles(self.cycles.1);
+          }
+        }
+        else {
+          report_unknown("CALL");
+        }
+      }
+      else {
+        report_unknown("CALL");
+      }
+    }
+    else {
+      report_unknown("CALL");
+    }
   }
 
   fn djnz(&self) {
     report_unknown("DJNZ");
   }
 
+  // RET Instruciton
   fn ret(&self) {
-    report_unknown("RET");
+    if self.table == "main" && self.len == 0 {
+      if self.code == 0xC9 {
+        // RET
+        let sp = read_reg16("SP");
+        let pc = Memory::read16(sp);
+        write_reg16("SP", ((sp as u32) + 2) as u16);
+        write_reg16("PC", pc);
+      }
+      else if self.code & 0xC7 == 0xC0 {
+        // RET cc
+        let cc_val = (self.code & 0x38) >> 3;
+        let cc = Register::condition_code_for(cc_val);
+        let flags = read_reg8("F");
+        let should_return = Register::check_condition(cc, flags);
+        if should_return {
+          let sp = read_reg16("SP");
+          let pc = Memory::read16(sp);
+          write_reg16("SP", ((sp as u32) + 2) as u16);
+          write_reg16("PC", pc);
+          Cpu::set_acitve_cycles(self.cycles.0);
+        }
+        else {
+          Cpu::set_acitve_cycles(self.cycles.1);
+        }
+      }
+      else {
+        report_unknown("RET");
+      }
+    }
+    else {
+      report_unknown("RET");
+    }
   }
 
   fn reti(&self) {
