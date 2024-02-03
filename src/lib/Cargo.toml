@@ -7,3 +7,9 @@ authors = ["Dan Shepherd"]
 [lib]
 name = "em_z80_lib"
 path = "lib.rs"
+
+[profile.dev]
+opt-level = 0
+
+[profile.release]
+opt-level = 3

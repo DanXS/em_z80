@@ -1,7 +1,9 @@
 
+use std::cmp::max;
 use std::sync::Mutex;
 use std::thread;
 use core::time::Duration;
+use std::time::Instant;
 use crate::util::*;
 use crate::instructions::Instruction;
 use crate::opcodes;
@@ -337,7 +339,7 @@ pub fn update_flags_for_negation8(val: u8, res: u16) {
   set_flag(Flag::N);
 }
 
-#[inline]
+#[inline(always)]
 pub fn get_parity(val: u8) -> bool {
   let mut parity = true;
   for i in 0..7 {
@@ -653,6 +655,7 @@ impl Cpu {
   fn run_inst(f: fn(&Instruction), opcode: &Opcode, data: [u8;2], len: usize) {
     // The minimum number of cycles unless changed by the instruction itself
     // For example, branching may take more cycles (cycles.0)
+    let now = Instant::now();
     Self::set_acitve_cycles(opcode.cycles.1);
     // Construct the instruction
     let inst = Instruction{code: opcode.code, 
@@ -661,10 +664,14 @@ impl Cpu {
       cycles: opcode.cycles};
     // Run the instruction
     f(&inst);
+    // Get the elapsed time the instruction took to execute
+    let elapsed = now.elapsed().as_nanos() as u64;
+    println!("Elapsed time without delay {}ns", elapsed);
     // Simulate the time it takes for the instruciton to run
     let delay_ns = Self::get_cycle_time()*(Self::get_acitve_cycles() as u64);
     println!("Cycles to execute: {}, delay {}ns", Self::get_acitve_cycles(), delay_ns);
-    thread::sleep(Duration::from_nanos(delay_ns));
+    let sleep_time_ns = max(0, (delay_ns as i64) - (elapsed as i64));
+    thread::sleep(Duration::from_nanos(sleep_time_ns as u64));
   }
 
   pub fn run() {
