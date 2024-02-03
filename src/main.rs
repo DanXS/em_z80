@@ -59,11 +59,11 @@ fn main() {
     });
     let weak_window = main_window.as_weak();
     main_window.on_set_register(move |reg: SharedString, val: SharedString| {
-        let reg_str = reg.as_str();
+        let reg_str = reg.as_str(); 
         let val_str = val.as_str();
         match u16::from_str_radix(val_str, 16) {
             Ok(res) => {
-                set_register16(reg_str, res);
+                set_register16(get_register_from_str(reg_str), res);
                 build_register_view(&(weak_window.unwrap()));
                 if reg_str == "PC" {
                     build_disassembly_view(&(weak_window.unwrap())); 

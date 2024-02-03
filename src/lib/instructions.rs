@@ -3,6 +3,7 @@ use crate::registers::Flag;
 use crate::cpu::Cpu;
 use crate::cpu::*;
 use crate::registers::Register;
+use crate::registers::Reg;
 use crate::util::*;
 
 #[inline]
@@ -120,59 +121,56 @@ impl InstTrait for Instruction {
   fn ld(&self) {
     if self.table == "main" {
       if self.len == 0 {
-        let reg_map = ["B", "C", "D", "E", "H", "L", "(HL)", "A"];
+        let reg_map = [Reg::B, Reg::C, Reg::D, Reg::E, Reg::H, Reg::L, Reg::HL, Reg::A];
         if self.code & 0xC0 == 0x40 {
           // LD r, r
           let src = (self.code & 0x07) as usize;
           let dst = ((self.code >> 3) & 0x07) as usize;
-          let src_reg = reg_map[src];
-          let dst_reg = reg_map[dst];
-          if src_reg == dst_reg {
-            return; // pointless instruction
-          }
-          else if src_reg == "(HL)" {
-            let hl : u16 = read_reg16("HL");
+          let src_reg = &reg_map[src];
+          let dst_reg = &reg_map[dst];
+          if matches!(src_reg, Reg::HL) {
+            let hl : u16 = read_reg16(&Reg::HL);
             let val = Memory::read8(hl);
-            write_reg8(dst_reg, val);
+            write_reg8(&dst_reg, val);
           }
-          else if dst_reg == "(HL)" {
-            let val = read_reg8(src_reg);
-            let hl : u16 = read_reg16("HL");
+          else if matches!(dst_reg,Reg::HL) {
+            let val = read_reg8(&src_reg);
+            let hl : u16 = read_reg16(&Reg::HL);
             Memory::write8(hl, val);
           }
           else {
-            let val = read_reg8(src_reg);
-            write_reg8(dst_reg, val);
+            let val = read_reg8(&src_reg);
+            write_reg8(&dst_reg, val);
           }
         }
         else if self.code == 0x02 {
           // LD (BC), A
-          let val = read_reg8("A");
-          let bc : u16 = read_reg16("BC");
+          let val = read_reg8(&Reg::A);
+          let bc : u16 = read_reg16(&Reg::BC);
           Memory::write8(bc, val);
         }
         else if self.code == 0x12 {
           // LD (DE), A
-          let val = read_reg8("A");
-          let de : u16 = read_reg16("DE");
+          let val = read_reg8(&Reg::A);
+          let de : u16 = read_reg16(&Reg::DE);
           Memory::write8(de, val);
         }
         else if self.code == 0x0A {
           // LD A, (BC)
-          let bc : u16 = read_reg16("BC");
+          let bc : u16 = read_reg16(&Reg::BC);
           let val = Memory::read8(bc);
-          write_reg8("A", val);
+          write_reg8(&Reg::A, val);
         }
         else if self.code == 0x1A {
           // LD A, (DC)
-          let de : u16 = read_reg16("DE");
+          let de : u16 = read_reg16(&Reg::DE);
           let val = Memory::read8(de);
-          write_reg8("A", val);
+          write_reg8(&Reg::A, val);
         }
         else if self.code == 0xF9 {
           // LD SP, HL
-          let hl : u16 = read_reg16("HL");
-          write_reg16("SP", hl);
+          let hl : u16 = read_reg16(&Reg::HL);
+          write_reg16(&Reg::SP, hl);
         }
         else {
           report_unknown("LD");
@@ -180,17 +178,17 @@ impl InstTrait for Instruction {
       }
       else if self.len == 1 {
         // LD r, n
-        let reg_map = ["B", "C", "D", "E", "H", "L", "(HL)", "A"];
+        let reg_map = [Reg::B, Reg::C, Reg::D, Reg::E, Reg::H, Reg::L, Reg::HL, Reg::A];
         if self.code & 0xC7 == 0x06 {
           let val = self.data as u8;
           let dst = ((self.code & 0x38) >> 3) as usize;
-          let dst_reg = reg_map[dst];
-          if dst_reg == "(HL)" {
-            let hl : u16 = read_reg16("HL");
+          let dst_reg = &reg_map[dst];
+          if matches!(dst_reg, Reg::HL) {
+            let hl : u16 = read_reg16(&Reg::HL);
             Memory::write8(hl, val);
           }
           else {
-            write_reg8(dst_reg, val);
+            write_reg8(&dst_reg, val);
           }
         }
         else {
@@ -198,53 +196,53 @@ impl InstTrait for Instruction {
         }
       }
       else if self.len == 2 {
-        let reg_map = ["BC", "DE", "HL", "SP"];
+        let reg_map = [Reg::BC, Reg::DE, Reg::HL, Reg::SP];
         if self.code & 0xCF == 0x01 {
           // LD rr, nn
           let val = self.data;
           let dst = ((self.code & 0x30) >> 4) as usize;
-          let dst_reg = reg_map[dst];
-          write_reg16(dst_reg, val);
+          let dst_reg = &reg_map[dst];
+          write_reg16(&dst_reg, val);
         }
         else if self.code & 0xCF == 0x43 {
           // LD (nn), rr
           let dst_addr = self.data;
           let src = ((self.code & 0x30) >> 4) as usize;
-          let src_reg = reg_map[src];
-          let val = read_reg16(src_reg);
+          let src_reg = &reg_map[src];
+          let val = read_reg16(&src_reg);
           Memory::write16(dst_addr, val);
         }
         else if self.code & 0xCF == 0x4B {
           // LD rr, (nn)
           let src_addr = self.data;
           let dst = ((self.code & 0x30) >> 4) as usize;
-          let dst_reg = reg_map[dst];
+          let dst_reg = &reg_map[dst];
           let val = Memory::read16(src_addr);
-          write_reg16(dst_reg, val);
+          write_reg16(&dst_reg, val);
         }
         else if self.code == 0x22 {
           // LD (nn), HL
           let dst_addr = self.data;
-          let val = read_reg16("HL");
+          let val = read_reg16(&Reg::HL);
           Memory::write16(dst_addr, val);
         }
         else if self.code == 0x2A {
           // LD HL, (nn)
           let src_addr = self.data;
           let val = Memory::read16(src_addr);
-          write_reg16("HL", val);
+          write_reg16(&Reg::HL, val);
         }
         else if self.code == 0x32 {
           // LD (nn), A
           let dst_addr = self.data;
-          let val = read_reg8("A");
+          let val = read_reg8(&Reg::A);
           Memory::write8(dst_addr, val);
         }
         else if self.code == 0x3A {
           // LD A, (nn)
           let src_addr = self.data;
           let val = Memory::read8(src_addr);
-          write_reg8("A", val);
+          write_reg8(&Reg::A, val);
         }
         else {
           report_unknown("LD");
@@ -255,26 +253,26 @@ impl InstTrait for Instruction {
       if self.len == 0 {
         if self.code == 0x47 {
           // LD I,A
-          let val = read_reg8("A");
-          write_reg8("I", val);
+          let val = read_reg8(&Reg::A);
+          write_reg8(&Reg::I, val);
         }
         else if self.code == 0x57 {
           // LD A,I
-          let val = read_reg8("I");
-          write_reg8("A", val);
+          let val = read_reg8(&Reg::I);
+          write_reg8(&Reg::A, val);
           clear_flag(Flag::H);
           clear_flag(Flag::N);
           // ToDo: set status flags based on interrupt flags
         }
         else if self.code == 0x4F {
           // LD R,A
-          let val = read_reg8("A");
-          write_reg8("R", val);
+          let val = read_reg8(&Reg::A);
+          write_reg8(&Reg::R, val);
         }
         else if self.code == 0x5F {
           // LD A,R
-          let val = read_reg8("R");
-          write_reg8("A", val);
+          let val = read_reg8(&Reg::R);
+          write_reg8(&Reg::A, val);
           clear_flag(Flag::H);
           clear_flag(Flag::N);
           // ToDo: set status flags based on interrupt flags
@@ -286,19 +284,19 @@ impl InstTrait for Instruction {
       else if self.len == 2 {
         if self.code & 0xCF == 0x43 {
           // LD nn,(rr)
-          let reg_map = ["BC", "DE", "HL", "SP"];
+          let reg_map = [Reg::BC, Reg::DE, Reg::HL, Reg::SP];
           let rr = (self.code & 0x30) >> 4;
-          let src_data = read_reg16(reg_map[rr as usize]);
+          let src_data = read_reg16(&reg_map[rr as usize]);
           let dst_addr = self.data;
           Memory::write16(dst_addr,src_data);
         }
         else if self.code & 0xCF == 0x4B {
           // LD rr,(nn)
-          let reg_map = ["BC", "DE", "HL", "SP"];
+          let reg_map = [Reg::BC, Reg::DE, Reg::HL, Reg::SP];
           let rr = (self.code & 0x30) >> 4;
-          let dst_reg = reg_map[rr as usize];
+          let dst_reg = &reg_map[rr as usize];
           let src_data = Memory::read16(self.data);
-          write_reg16(dst_reg, src_data);
+          write_reg16(&dst_reg, src_data);
         }
         else {
           report_unknown("LD");
@@ -312,14 +310,14 @@ impl InstTrait for Instruction {
       if self.len == 1 {
         if self.code & 0xC7 == 0x46 { 
           // LD r,(IX+d)
-          let reg_map = ["B", "C", "D", "E", "H", "L", "_", "A"];
+          let reg_map = [Reg::B, Reg::C, Reg::D, Reg::E, Reg::H, Reg::L, Reg::HL, Reg::A];
           let r = (self.code & 0x38) >> 3;
-          let dst_reg = reg_map[r as usize];
-          if dst_reg != "_" {
-            let addr = read_reg16("IX");
+          let dst_reg = &reg_map[r as usize];
+          if !matches!(dst_reg, Reg::HL) {
+            let addr = read_reg16(&Reg::IX);
             let src_addr = calc_address_with_offset(addr, self.data as u8);
             let val = Memory::read8(src_addr);
-            write_reg8(dst_reg, val);
+            write_reg8(&dst_reg, val);
           }
           else {
             report_unknown("LD");
@@ -327,13 +325,13 @@ impl InstTrait for Instruction {
         }
         else if self.code & 0xF8 == 0x70 {
           // LD (IX+d),r
-          let reg_map = ["B", "C", "D", "E", "H", "L", "_", "A"];
+          let reg_map = [Reg::B, Reg::C, Reg::D, Reg::E, Reg::H, Reg::L, Reg::HL, Reg::A];
           let r = self.code & 0x07;
-          let src_reg = reg_map[r as usize];
-          if src_reg != "_" {
-            let addr = read_reg16("IX");
+          let src_reg = &reg_map[r as usize];
+          if !matches!(src_reg, Reg::HL) {
+            let addr = read_reg16(&Reg::IX);
             let dst_addr = calc_address_with_offset(addr, self.data as u8);
-            let val = read_reg8(src_reg);
+            let val = read_reg8(&src_reg);
             Memory::write8(dst_addr, val);
           }
           else {
@@ -348,7 +346,7 @@ impl InstTrait for Instruction {
           // LD (IX+d),n
           let d = self.data as u8;
           let val = ((self.data >> 8) & 0x00FF) as u8;
-          let addr = read_reg16("IX");
+          let addr = read_reg16(&Reg::IX);
           let dst_addr = calc_address_with_offset(addr, d);
           Memory::write8(dst_addr, val);
       }
@@ -360,14 +358,14 @@ impl InstTrait for Instruction {
       if self.len == 1 {
         if self.code & 0xC7 == 0x46 { 
           // LD r,(IY+d)
-          let reg_map = ["B", "C", "D", "E", "H", "L", "_", "A"];
+          let reg_map = [Reg::B, Reg::C, Reg::D, Reg::E, Reg::H, Reg::L, Reg::HL, Reg::A];
           let r = (self.code & 0x38) >> 3;
-          let dst_reg = reg_map[r as usize];
-          if dst_reg != "_" {
-            let addr = read_reg16("IY");
+          let dst_reg = &reg_map[r as usize];
+          if !matches!(dst_reg, Reg::HL) {
+            let addr = read_reg16(&Reg::IY);
             let src_addr = calc_address_with_offset(addr, self.data as u8);
             let val = Memory::read8(src_addr);
-            write_reg8(dst_reg, val);
+            write_reg8(&dst_reg, val);
           }
           else {
             report_unknown("LD");
@@ -375,13 +373,13 @@ impl InstTrait for Instruction {
         }
         else if self.code & 0xF8 == 0x70 {
           // LD (IY+d),r
-          let reg_map = ["B", "C", "D", "E", "H", "L", "_", "A"];
+          let reg_map = [Reg::B, Reg::C, Reg::D, Reg::E, Reg::H, Reg::L, Reg::HL, Reg::A];
           let r = self.code & 0x07;
-          let src_reg = reg_map[r as usize];
-          if src_reg != "_" {
-            let addr = read_reg16("IY");
+          let src_reg = &reg_map[r as usize];
+          if !matches!(src_reg, Reg::HL) {
+            let addr = read_reg16(&Reg::IY);
             let dst_addr = calc_address_with_offset(addr, self.data as u8);
-            let val = read_reg8(src_reg);
+            let val = read_reg8(&src_reg);
             Memory::write8(dst_addr, val);
           }
           else {
@@ -397,7 +395,7 @@ impl InstTrait for Instruction {
           // LD (IY+d),n
           let d = self.data as u8;
           let val = ((self.data >> 8) & 0x00FF) as u8;
-          let addr = read_reg16("IY");
+          let addr = read_reg16(&Reg::IY);
           let dst_addr = calc_address_with_offset(addr, d);
           Memory::write8(dst_addr, val);
         }
@@ -415,24 +413,24 @@ impl InstTrait for Instruction {
     if self.table == "main" {
       if self.code == 0xEB {
         // EX DE, HL
-        let de = read_reg16("DE");
-        let hl = read_reg16("HL");
-        write_reg16("HL", de);
-        write_reg16("DE", hl);
+        let de = read_reg16(&Reg::DE);
+        let hl = read_reg16(&Reg::HL);
+        write_reg16(&Reg::HL, de);
+        write_reg16(&Reg::DE, hl);
       }
       else if self.code == 0x08 {
         // EX AF, AF'
-        let af = read_reg16("AF");
-        let af_p = read_reg16("AF'");
-        write_reg16("AF'", af);
-        write_reg16("AF", af_p);
+        let af = read_reg16(&Reg::AF);
+        let af_p = read_reg16(&Reg::AFP);
+        write_reg16(&Reg::AFP, af);
+        write_reg16(&Reg::AF, af_p);
       }
       else if self.code == 0xE3 {
         // EX (SP), HL
-        let sp = read_reg16("SP");
-        let hl = read_reg16("HL");
+        let sp = read_reg16(&Reg::SP);
+        let hl = read_reg16(&Reg::HL);
         let data = Memory::read16(sp);
-        write_reg16("HL", data);
+        write_reg16(&Reg::HL, data);
         Memory::write16(sp, hl);
       }
       else {
@@ -448,18 +446,18 @@ impl InstTrait for Instruction {
     if self.table == "main" {
       if self.code == 0xD9 {
         // EXX
-        let bc = read_reg16("BC");
-        let de = read_reg16("DE");
-        let hl = read_reg16("HL");
-        let bc_p = read_reg16("BC'");
-        let de_p = read_reg16("DE'");
-        let hl_p = read_reg16("HL'");
-        write_reg16("BC", bc_p);
-        write_reg16("DE", de_p);
-        write_reg16("HL", hl_p);
-        write_reg16("BC'", bc);
-        write_reg16("DE'", de);
-        write_reg16("HL'", hl);
+        let bc = read_reg16(&Reg::BC);
+        let de = read_reg16(&Reg::DE);
+        let hl = read_reg16(&Reg::HL);
+        let bc_p = read_reg16(&Reg::BCP);
+        let de_p = read_reg16(&Reg::DEP);
+        let hl_p = read_reg16(&Reg::HLP);
+        write_reg16(&Reg::BC, bc_p);
+        write_reg16(&Reg::DE, de_p);
+        write_reg16(&Reg::HL, hl_p);
+        write_reg16(&Reg::BCP, bc);
+        write_reg16(&Reg::DEP, de);
+        write_reg16(&Reg::HLP, hl);
       }
       else {
         report_unknown("EXX");
@@ -475,30 +473,30 @@ impl InstTrait for Instruction {
     if self.table == "main" {
       if self.code & 0xC7 == 0x04 {
         // INC r
-        let reg_map = ["B", "C", "D", "E", "H", "L", "(HL)", "A"];
+        let reg_map = [Reg::B, Reg::C, Reg::D, Reg::E, Reg::H, Reg::L, Reg::HL, Reg::A];
         let dst = ((self.code & 0x38) >> 3) as usize;
-        let reg = reg_map[dst];
-        if reg == "(HL)" {
-          let addr = read_reg16("HL");
+        let reg = &reg_map[dst];
+        if matches!(reg, Reg::HL) {
+          let addr = read_reg16(&Reg::HL);
           let val = Memory::read8(addr);
           let inc_val = inc_u8_wrap(val);
           Memory::write8(addr, inc_val);
           update_flags_for_inc(val, inc_val);
         }
         else  {
-          let val = read_reg8(reg);
+          let val = read_reg8(&reg);
           let inc_val = inc_u8_wrap(val);
-          write_reg8(reg, inc_val);
+          write_reg8(&reg, inc_val);
           update_flags_for_inc(val, inc_val);
         }
       }
       else if self.code & 0xCF == 0x03 {
         // INC rr
-        let reg_map = ["BC", "DE", "HL", "SP"];
+        let reg_map = [Reg::BC, Reg::DE, Reg::HL, Reg::SP];
         let dst = ((self.code & 0x30) >> 4) as usize;
-        let reg = reg_map[dst];
-        let val = read_reg16(reg);
-        write_reg16(reg, inc_u16_wrap(val));
+        let reg = &reg_map[dst];
+        let val = read_reg16(&reg);
+        write_reg16(&reg, inc_u16_wrap(val));
       }
       else {
         report_unknown("INC");
@@ -507,12 +505,12 @@ impl InstTrait for Instruction {
     else if self.table == "ix" {
       if self.len == 0 && self.code == 0x23 {
         // INC IX
-        let val = read_reg16("IX");
-        write_reg16("IX", inc_u16_wrap(val));
+        let val = read_reg16(&Reg::IX);
+        write_reg16(&Reg::IX, inc_u16_wrap(val));
       }
       if self.len == 1 && self.code == 0x34 {
         // INC (IX + d)
-        let addr = read_reg16("IX");
+        let addr = read_reg16(&Reg::IX);
         let src_addr = calc_address_with_offset(addr, self.data as u8);
         let val = Memory::read8(src_addr);
         let inc_val = inc_u8_wrap(val);
@@ -526,12 +524,12 @@ impl InstTrait for Instruction {
     else if self.table == "iy" {
       if self.len == 0 && self.code == 0x23 {
         // INC IY
-        let val = read_reg16("IY");
-        write_reg16("IY", inc_u16_wrap(val));
+        let val = read_reg16(&Reg::IY);
+        write_reg16(&Reg::IY, inc_u16_wrap(val));
       }
       else if self.len == 1 && self.code == 0x34 {
         // INC (IY + d)
-        let addr = read_reg16("IY");
+        let addr = read_reg16(&Reg::IY);
         let src_addr = calc_address_with_offset(addr, self.data as u8);
         let val = Memory::read8(src_addr);
         let inc_val = inc_u8_wrap(val);
@@ -551,12 +549,12 @@ impl InstTrait for Instruction {
   fn dec(&self) {
     if self.table == "main" {
       if self.code & 0xC7 == 0x05 {
-        let reg_map = ["B", "C", "D", "E", "H", "L", "(HL)", "A"];
+        let reg_map = [Reg::B, Reg::C, Reg::D, Reg::E, Reg::H, Reg::L, Reg::HL, Reg::A];
         let dst = ((self.code & 0x38) >> 3) as usize;
-        let reg = reg_map[dst];
-        if reg == "(HL)" {
+        let reg = &reg_map[dst];
+        if matches!(reg, Reg::HL) {
           // DEC (HL)
-          let addr = read_reg16("HL");
+          let addr = read_reg16(&Reg::HL);
           let val = Memory::read8(addr);
           let dec_val = dec_u8_wrap(val);
           Memory::write8(addr, dec_val);
@@ -564,19 +562,19 @@ impl InstTrait for Instruction {
         }
         else  {
           // DEC r
-          let val = read_reg8(reg);
+          let val = read_reg8(&reg);
           let dec_val = dec_u8_wrap(val);
-          write_reg8(reg, dec_val);
+          write_reg8(&reg, dec_val);
           update_flags_for_dec(val, dec_val);
         }
       }
       else if self.code & 0xCF == 0x0B {
         // DEC rr
-        let reg_map = ["BC", "DE", "HL", "SP"];
+        let reg_map = [Reg::BC, Reg::DE, Reg::HL, Reg::SP];
         let dst = ((self.code & 0x30) >> 4) as usize;
-        let reg = reg_map[dst];
-        let val = read_reg16(reg);
-        write_reg16(reg, dec_u16_wrap(val));
+        let reg = &reg_map[dst];
+        let val = read_reg16(&reg);
+        write_reg16(&reg, dec_u16_wrap(val));
       }
       else {
         report_unknown("DEC");
@@ -585,12 +583,12 @@ impl InstTrait for Instruction {
     else if self.table == "ix" {
       if self.len == 0 && self.code == 0x2B {
         // DEX IX
-        let val = read_reg16("IX");
-        write_reg16("IX", dec_u16_wrap(val));
+        let val = read_reg16(&Reg::IX);
+        write_reg16(&Reg::IX, dec_u16_wrap(val));
       }
       if self.len == 1 && self.code == 0x34 {
         // DEC (IX + d)
-        let addr = read_reg16("IX");
+        let addr = read_reg16(&Reg::IX);
         let src_addr = calc_address_with_offset(addr, self.data as u8);
         let val = Memory::read8(src_addr);
         let dec_val = dec_u8_wrap(val);
@@ -604,12 +602,12 @@ impl InstTrait for Instruction {
     else if self.table == "iy" {
       if self.len == 0 && self.code == 0x2B {
         // DEX IY
-        let val = read_reg16("IY");
-        write_reg16("IY", dec_u16_wrap(val));
+        let val = read_reg16(&Reg::IY);
+        write_reg16(&Reg::IY, dec_u16_wrap(val));
       }
       if self.len == 1 && self.code == 0x34 {
         // DEC (IY + d)
-        let addr = read_reg16("IY");
+        let addr = read_reg16(&Reg::IY);
         let src_addr = calc_address_with_offset(addr, self.data as u8);
         let val = Memory::read8(src_addr);
         let dec_val = dec_u8_wrap(val);
@@ -629,29 +627,29 @@ impl InstTrait for Instruction {
   fn push(&self) {
     if self.table == "main" && self.code & 0xCF == 0xC5 {
       // PUSH rr
-      let reg_map = ["BC", "DE", "HL", "SP"];
+      let reg_map = [Reg::BC, Reg::DE, Reg::HL, Reg::SP];
       let src = ((self.code & 0x30) >> 4) as usize;
-      let src_reg = reg_map[src];
-      let val = read_reg16(src_reg);
-      let mut addr = read_reg16("SP");
+      let src_reg = &reg_map[src];
+      let val = read_reg16(&src_reg);
+      let mut addr = read_reg16(&Reg::SP);
       addr = ((addr as i32) - 2) as u16;
-      write_reg16("SP", addr);
+      write_reg16(&Reg::SP, addr);
       Memory::write16(addr, val);
     }
     else if self.table == "ix" && self.code == 0xE5 {
       // PUSH IX
-      let val = read_reg16("IX");
-      let mut addr = read_reg16("SP");
+      let val = read_reg16(&Reg::IX);
+      let mut addr = read_reg16(&Reg::SP);
       addr = ((addr as i32) - 2) as u16;
-      write_reg16("SP", addr);
+      write_reg16(&Reg::SP, addr);
       Memory::write16(addr, val);
     }
     else if self.table == "iy" && self.code == 0xE5 {
       // PUSH IY
-      let val = read_reg16("IY");
-      let mut addr = read_reg16("SP");
+      let val = read_reg16(&Reg::IY);
+      let mut addr = read_reg16(&Reg::SP);
       addr = ((addr as i32) - 2) as u16;
-      write_reg16("SP", addr);
+      write_reg16(&Reg::SP, addr);
       Memory::write16(addr, val);
     }
     else {
@@ -663,30 +661,30 @@ impl InstTrait for Instruction {
   fn pop(&self) {
     if self.table == "main" && self.code & 0xCF == 0xC1 {
       // POP rr
-      let reg_map = ["BC", "DE", "HL", "SP"];
+      let reg_map = [Reg::BC, Reg::DE, Reg::HL, Reg::SP];
       let rr = ((self.code & 0x30) >> 4) as usize;
-      let dst_reg = reg_map[rr];
-      let mut addr = read_reg16("SP");
+      let dst_reg = &reg_map[rr];
+      let mut addr = read_reg16(&Reg::SP);
       let val = Memory::read16(addr);
-      write_reg16(dst_reg, val);
+      write_reg16(&dst_reg, val);
       addr = ((addr as u32) + 2) as u16;
-      write_reg16("SP", addr);
+      write_reg16(&Reg::SP, addr);
     }
     else if self.table == "ix" && self.code == 0xE1 {
       // POP IX
-      let mut addr = read_reg16("SP");
+      let mut addr = read_reg16(&Reg::SP);
       let val = Memory::read16(addr);
-      write_reg16("IX", val);
+      write_reg16(&Reg::IX, val);
       addr = ((addr as u32) + 2) as u16;
-      write_reg16("SP", addr);
+      write_reg16(&Reg::SP, addr);
     }
     else if self.table == "iy" && self.code == 0xE1 {
       // POP IY
-      let mut addr = read_reg16("SP");
+      let mut addr = read_reg16(&Reg::SP);
       let val = Memory::read16(addr);
-      write_reg16("IY", val);
+      write_reg16(&Reg::IY, val);
       addr = ((addr as u32) + 2) as u16;
-      write_reg16("SP", addr);
+      write_reg16(&Reg::SP, addr);
     }
     else {
       report_unknown("POP");
@@ -699,32 +697,32 @@ impl InstTrait for Instruction {
       if self.len == 0 {
         if self.code & 0xF8 == 0x80 {
           // ADD A,r
-          let reg_map = ["B", "C", "D", "E", "H", "L", "(HL)", "A"];
+          let reg_map = [Reg::B, Reg::C, Reg::D, Reg::E, Reg::H, Reg::L, Reg::HL, Reg::A];
           let r = self.code & 0x07;
-          let src_reg = reg_map[r as usize];
-          let val1 = read_reg8("A");
+          let src_reg = &reg_map[r as usize];
+          let val1 = read_reg8(&Reg::A);
           let val2 = {
-            if src_reg == "(HL)" {
-              let src_addr = read_reg16("HL");
+            if matches!(src_reg, Reg::HL) {
+              let src_addr = read_reg16(&Reg::HL);
               Memory::read8(src_addr)
             }
             else {
-              read_reg8(src_reg)
+              read_reg8(&src_reg)
             }
           };
           let res = (val1 as u16) + (val2 as u16);
-          write_reg8("A", (res & 0xFF) as u8);
+          write_reg8(&Reg::A, (res & 0xFF) as u8);
           update_flags_for_addition8(val1, val2, res);
         }
         else if self.code & 0xCF == 0x09 {
           // ADD HL,rr
-          let reg_map = ["BE", "DE", "HL", "SP"];
+          let reg_map = [Reg::BC, Reg::DE, Reg::HL, Reg::SP];
           let rr = (self.code & 0x30) >> 4;
-          let src_reg = reg_map[rr as usize];
-          let val1 = read_reg16("HL");
-          let val2 = read_reg16(src_reg);
+          let src_reg = &reg_map[rr as usize];
+          let val1 = read_reg16(&Reg::HL);
+          let val2 = read_reg16(&src_reg);
           let res = (val1 as u32) + (val2 as u32);
-          write_reg16("HL", (res & 0xFFFF) as u16);
+          write_reg16(&Reg::HL, (res & 0xFFFF) as u16);
           update_flags_for_addition16(val1, res);
         }
         else {
@@ -734,10 +732,10 @@ impl InstTrait for Instruction {
       else if self.len == 1 {
         if self.code == 0xC6 {
           // ADD A,n
-          let val1 = read_reg8("A");
+          let val1 = read_reg8(&Reg::A);
           let val2 = ((self.data >> 8) & 0xFF) as u8;
           let res = (val1 as u16) + (val2 as u16);
-          write_reg8("A", (res & 0xFF) as u8);
+          write_reg8(&Reg::A, (res & 0xFF) as u8);
           update_flags_for_addition8(val1, val2, res);
         }
         else {
@@ -751,22 +749,22 @@ impl InstTrait for Instruction {
     else if self.table == "ix" {
       if self.code == 0x86 {
         // ADD A, (IX + d)
-        let val1 = read_reg8("A");
-        let addr = read_reg16("IX");
+        let val1 = read_reg8(&Reg::A);
+        let addr = read_reg16(&Reg::IX);
         let src_addr = calc_address_with_offset(addr, self.data as u8);
         let val2 = Memory::read8(src_addr);
         let res = (val1 as u16) + (val2 as u16);
-        write_reg8("A", (res & 0xFF) as u8);
+        write_reg8(&Reg::A, (res & 0xFF) as u8);
         update_flags_for_addition8(val1, val2, res);
       }
       else if self.code & 0xCF == 0x09 {
         // ADD IX, rr
-        let val1 = read_reg16("IX");
-        let reg_map = ["BC", "DE", "IX", "SP"];
+        let val1 = read_reg16(&Reg::IX);
+        let reg_map = [Reg::BC, Reg::DE, Reg::IX, Reg::SP];
         let rr = self.code & 0x30;
-        let val2 = read_reg16(reg_map[rr as usize]);
+        let val2 = read_reg16(&reg_map[rr as usize]);
         let res = (val1 as u32) + (val2 as u32);
-        write_reg16("IX", (res & 0xFFFF) as u16);
+        write_reg16(&Reg::IX, (res & 0xFFFF) as u16);
         update_flags_for_addition16(val1, res);
       }
       else {
@@ -776,22 +774,22 @@ impl InstTrait for Instruction {
     else if self.table == "iy" {
       if self.code == 0x86 {
         // ADD A, (IY + d)
-        let val1 = read_reg8("A");
-        let addr = read_reg16("IY");
+        let val1 = read_reg8(&Reg::A);
+        let addr = read_reg16(&Reg::IY);
         let src_addr = calc_address_with_offset(addr, self.data as u8);
         let val2 = Memory::read8(src_addr);
         let res = (val1 as u16) + (val2 as u16);
-        write_reg8("A", (res & 0xFF) as u8);
+        write_reg8(&Reg::A, (res & 0xFF) as u8);
         update_flags_for_addition8(val1, val2, res);
       }
       else if self.code & 0xCF == 0x09 {
         // ADD IY, rr
-        let val1 = read_reg16("IY");
-        let reg_map = ["BC", "DE", "IY", "SP"];
+        let val1 = read_reg16(&Reg::IY);
+        let reg_map = [Reg::BC, Reg::DE, Reg::IY, Reg::SP];
         let rr = self.code & 0x30;
-        let val2 = read_reg16(reg_map[rr as usize]);
+        let val2 = read_reg16(&reg_map[rr as usize]);
         let res = (val1 as u32) + (val2 as u32);
-        write_reg16("IY", (res & 0xFFFF) as u16);
+        write_reg16(&Reg::IY, (res & 0xFFFF) as u16);
         update_flags_for_addition16(val1, res);
       }
       else {
@@ -813,21 +811,21 @@ impl InstTrait for Instruction {
       if self.len == 0 {
         if self.code & 0xF8 == 0x88 {
           // ADC A,r
-          let reg_map = ["B", "C", "D", "E", "H", "L", "(HL)", "A"];
+          let reg_map = [Reg::B, Reg::C, Reg::D, Reg::E, Reg::H, Reg::L, Reg::HL, Reg::A];
           let r = self.code & 0x07;
-          let src_reg = reg_map[r as usize];
-          let val1 = read_reg8("A");
+          let src_reg = &reg_map[r as usize];
+          let val1 = read_reg8(&Reg::A);
           let val2 = {
-            if src_reg == "(HL)" {
-              let src_addr = read_reg16("HL");
+            if matches!(src_reg, Reg::HL) {
+              let src_addr = read_reg16(&Reg::HL);
               Memory::read8(src_addr)
             }
             else {
-              read_reg8(src_reg)
+              read_reg8(&src_reg)
             }
           };
           let res = (val1 as u16) + (val2 as u16) + (carry as u16);
-          write_reg8("A", (res & 0xFF) as u8);
+          write_reg8(&Reg::A, (res & 0xFF) as u8);
           update_flags_for_addition8(val1, u8_plus_carry_wrap(val2, carry), res);
         }
         else {
@@ -837,10 +835,10 @@ impl InstTrait for Instruction {
       else if self.len == 1 {
         if self.code == 0xCE {
           // ADC A,n
-          let val1 = read_reg8("A");
+          let val1 = read_reg8(&Reg::A);
           let val2 = ((self.data >> 8) & 0xFF) as u8;
           let res = (val1 as u16) + (val2 as u16) + (carry as u16);
-          write_reg8("A", (res & 0xFF) as u8);
+          write_reg8(&Reg::A, (res & 0xFF) as u8);
           update_flags_for_addition8(val1, u8_plus_carry_wrap(val2, carry), res);
         }
         else {
@@ -854,13 +852,13 @@ impl InstTrait for Instruction {
     else if self.table == "misc" {
       if self.code & 0xCF == 0x4A {
         // ADC HL,rr
-        let reg_map = ["BE", "DE", "HL", "SP"];
+        let reg_map = [Reg::BC, Reg::DE, Reg::HL, Reg::SP];
         let rr = (self.code & 0x30) >> 4;
-        let src_reg = reg_map[rr as usize];
-        let val1 = read_reg16("HL");
-        let val2 = read_reg16(src_reg);
+        let src_reg = &reg_map[rr as usize];
+        let val1 = read_reg16(&Reg::HL);
+        let val2 = read_reg16(&src_reg);
         let res = (val1 as u32) + (val2 as u32) + (carry as u32);
-        write_reg16("HL", (res & 0xFFFF) as u16);
+        write_reg16(&Reg::HL, (res & 0xFFFF) as u16);
         update_flags_for_addition_with_carry16(val1, val2, res);
       }
       else {
@@ -870,24 +868,24 @@ impl InstTrait for Instruction {
     else if self.table == "ix" {
       // ADC A, (IX + d)
       if self.code == 0x8E {
-        let val1 = read_reg8("A");
-        let addr = read_reg16("IX");
+        let val1 = read_reg8(&Reg::A);
+        let addr = read_reg16(&Reg::IX);
         let src_addr = calc_address_with_offset(addr, self.data as u8);
         let val2 = Memory::read8(src_addr);
         let res = (val1 as u16) + (val2 as u16) + (carry as u16);
-        write_reg8("A", (res & 0xFF) as u8);
+        write_reg8(&Reg::A, (res & 0xFF) as u8);
         update_flags_for_addition8(val1, u8_plus_carry_wrap(val2, carry), res);
       }
     }
     else if self.table == "iy" {
       // ADC A, (IY + d)
       if self.code == 0x8E {
-        let val1 = read_reg8("A");
-        let addr = read_reg16("IY");
+        let val1 = read_reg8(&Reg::A);
+        let addr = read_reg16(&Reg::IY);
         let src_addr = calc_address_with_offset(addr, self.data as u8);
         let val2 = Memory::read8(src_addr);
         let res = (val1 as u16) + (val2 as u16) + (carry as u16);
-        write_reg8("A", (res & 0xFF) as u8);
+        write_reg8(&Reg::A, (res & 0xFF) as u8);
         update_flags_for_addition8(val1, u8_plus_carry_wrap(val2, carry), res);
       }
     }
@@ -902,21 +900,21 @@ impl InstTrait for Instruction {
       if self.len == 0 {
         if self.code & 0xF8 == 0x90 {
           // SUB A,r
-          let reg_map = ["B", "C", "D", "E", "H", "L", "(HL)", "A"];
+          let reg_map = [Reg::B, Reg::C, Reg::D, Reg::E, Reg::H, Reg::L, Reg::HL, Reg::A];
           let r = self.code & 0x07;
-          let src_reg = reg_map[r as usize];
-          let val1 = read_reg8("A");
+          let src_reg = &reg_map[r as usize];
+          let val1 = read_reg8(&Reg::A);
           let val2 = {
-            if src_reg == "(HL)" {
-              let src_addr = read_reg16("HL");
+            if matches!(src_reg, Reg::HL) {
+              let src_addr = read_reg16(&Reg::HL);
               Memory::read8(src_addr)
             }
             else {
-              read_reg8(src_reg)
+              read_reg8(&src_reg)
             }
           };
           let res = (val1 as i16) - (val2 as i16);
-          write_reg8("A", (res & 0xFF) as u8);
+          write_reg8(&Reg::A, (res & 0xFF) as u8);
           update_flags_for_subtraction8(val1, val2, res as u16);
         }
         else {
@@ -926,10 +924,10 @@ impl InstTrait for Instruction {
       else if self.len == 1 {
         if self.code == 0xD6 {
           // SUB A,n
-          let val1 = read_reg8("A");
+          let val1 = read_reg8(&Reg::A);
           let val2 = ((self.data >> 8) & 0xFF) as u8;
           let res = (val1 as i16) - (val2 as i16);
-          write_reg8("A", (res & 0xFF) as u8);
+          write_reg8(&Reg::A, (res & 0xFF) as u8);
           update_flags_for_subtraction8(val1, val2, res as u16);
         }
         else {
@@ -943,24 +941,24 @@ impl InstTrait for Instruction {
     else if self.table == "ix" {
       // SUB A, (IX + d)
       if self.code == 0x96 {
-        let val1 = read_reg8("A");
-        let addr = read_reg16("IX");
+        let val1 = read_reg8(&Reg::A);
+        let addr = read_reg16(&Reg::IX);
         let src_addr = calc_address_with_offset(addr, self.data as u8);
         let val2 = Memory::read8(src_addr);
         let res = (val1 as i16) - (val2 as i16);
-        write_reg8("A", (res & 0xFF) as u8);
+        write_reg8(&Reg::A, (res & 0xFF) as u8);
         update_flags_for_subtraction8(val1, val2, res as u16);
       }
     }
     else if self.table == "iy" {
       // SUB A, (IY + d)
       if self.code == 0x96 {
-        let val1 = read_reg8("A");
-        let addr = read_reg16("IY");
+        let val1 = read_reg8(&Reg::A);
+        let addr = read_reg16(&Reg::IY);
         let src_addr = calc_address_with_offset(addr, self.data as u8);
         let val2 = Memory::read8(src_addr);
         let res = (val1 as i16) - (val2 as i16);
-        write_reg8("A", (res & 0xFF) as u8);
+        write_reg8(&Reg::A, (res & 0xFF) as u8);
         update_flags_for_subtraction8(val1, val2, res as u16);
       }
     }
@@ -979,21 +977,21 @@ impl InstTrait for Instruction {
       if self.len == 0 {
         if self.code & 0xF8 == 0x98 {
           // SBC A,r
-          let reg_map = ["B", "C", "D", "E", "H", "L", "(HL)", "A"];
+          let reg_map = [Reg::B, Reg::C, Reg::D, Reg::E, Reg::H, Reg::L, Reg::HL, Reg::A];
           let r = self.code & 0x07;
-          let src_reg = reg_map[r as usize];
-          let val1 = read_reg8("A");
+          let src_reg = &reg_map[r as usize];
+          let val1 = read_reg8(&Reg::A);
           let val2 = {
-            if src_reg == "(HL)" {
-              let src_addr = read_reg16("HL");
+            if matches!(src_reg, Reg::HL) {
+              let src_addr = read_reg16(&Reg::HL);
               Memory::read8(src_addr)
             }
             else {
-              read_reg8(src_reg)
+              read_reg8(&src_reg)
             }
           };
           let res = (val1 as i16) - (val2 as i16) - (carry as i16);
-          write_reg8("A", (res & 0xFF) as u8);
+          write_reg8(&Reg::A, (res & 0xFF) as u8);
           update_flags_for_subtraction8(val1, u8_plus_carry_wrap(val2, carry), res as u16);
         }
         else {
@@ -1003,10 +1001,10 @@ impl InstTrait for Instruction {
       else if self.len == 1 {
         if self.code == 0xDE {
           // SBC A,n
-          let val1 = read_reg8("A");
+          let val1 = read_reg8(&Reg::A);
           let val2 = ((self.data >> 8) & 0xFF) as u8;
           let res = (val1 as i16) - (val2 as i16) - (carry as i16);
-          write_reg8("A", (res & 0xFF) as u8);
+          write_reg8(&Reg::A, (res & 0xFF) as u8);
           update_flags_for_subtraction8(val1, u8_plus_carry_wrap(val2, carry), res as u16);
         }
         else {
@@ -1020,13 +1018,13 @@ impl InstTrait for Instruction {
     else if self.table == "misc" {
       if self.code & 0xCF == 0x42 {
         // SDC HL,rr
-        let reg_map = ["BE", "DE", "HL", "SP"];
+        let reg_map = [Reg::BC, Reg::DE, Reg::HL, Reg::SP];
         let rr = (self.code & 0x30) >> 4;
-        let src_reg = reg_map[rr as usize];
-        let val1 = read_reg16("HL");
-        let val2 = read_reg16(src_reg);
+        let src_reg = &reg_map[rr as usize];
+        let val1 = read_reg16(&Reg::HL);
+        let val2 = read_reg16(&src_reg);
         let res = (val1 as i32) - (val2 as i32) - (carry as i32);
-        write_reg16("HL", (res & 0xFFFF) as u16);
+        write_reg16(&Reg::HL, (res & 0xFFFF) as u16);
         update_flags_for_subtraction_with_carry16(val1, val2, res as u32);
       }
       else {
@@ -1036,24 +1034,24 @@ impl InstTrait for Instruction {
     else if self.table == "ix" {
       // SBC A, (IX + d)
       if self.code == 0x9E {
-        let val1 = read_reg8("A");
-        let addr = read_reg16("IX");
+        let val1 = read_reg8(&Reg::A);
+        let addr = read_reg16(&Reg::IX);
         let src_addr = calc_address_with_offset(addr, self.data as u8);
         let val2 = Memory::read8(src_addr);
         let res = (val1 as i16) - (val2 as i16) - (carry as i16);
-        write_reg8("A", (res & 0xFF) as u8);
+        write_reg8(&Reg::A, (res & 0xFF) as u8);
         update_flags_for_subtraction8(val1, u8_plus_carry_wrap(val2, carry), res as u16);
       }
     }
     else if self.table == "iy" {
       // SBC A, (IY + d)
       if self.code == 0x9E {
-        let val1 = read_reg8("A");
-        let addr = read_reg16("IY");
+        let val1 = read_reg8(&Reg::A);
+        let addr = read_reg16(&Reg::IY);
         let src_addr = calc_address_with_offset(addr, self.data as u8);
         let val2 = Memory::read8(src_addr);
         let res = (val1 as i16) - (val2 as i16) - (carry as i16);
-        write_reg8("A", (res & 0xFF) as u8);
+        write_reg8(&Reg::A, (res & 0xFF) as u8);
         update_flags_for_subtraction8(val1, u8_plus_carry_wrap(val2, carry), res as u16);
       }
     }
@@ -1066,9 +1064,9 @@ impl InstTrait for Instruction {
   fn neg(&self) {
     if self.table == "misc" {
       if self.code == 0x44 {
-        let val = read_reg8("A");
+        let val = read_reg8(&Reg::A);
         let res = -(val as i16);
-        write_reg8("A", res as u8);
+        write_reg8(&Reg::A, res as u8);
         update_flags_for_negation8(val, res as u16);
       }
       else {
@@ -1086,22 +1084,22 @@ impl InstTrait for Instruction {
       if self.len == 0 {
         if self.code & 0xF8 == 0xA0 {
           // AND r
-          let reg_map = ["B", "C", "D", "E", "H", "L", "(HL)", "A"];
+          let reg_map = [Reg::B, Reg::C, Reg::D, Reg::E, Reg::H, Reg::L, Reg::HL, Reg::A];
           let r = self.code & 0x07;
-          let src_reg = reg_map[r as usize];
-          let val = read_reg8("A");
-          if src_reg == "(HL)" {
+          let src_reg = &reg_map[r as usize];
+          let val = read_reg8(&Reg::A);
+          if matches!(src_reg, Reg::HL) {
             // AND (HL)
-            let src_addr = read_reg16("HL");
+            let src_addr = read_reg16(&Reg::HL);
             let src_val = Memory::read8(src_addr);
             let res = val & src_val;
-            write_reg8("A", res);
+            write_reg8(&Reg::A, res);
             update_flags_for_logical_op(res, true);
           }
           else {
-            let src_val = read_reg8(src_reg);
+            let src_val = read_reg8(&src_reg);
             let res = val & src_val;
-            write_reg8("A", res);
+            write_reg8(&Reg::A, res);
             update_flags_for_logical_op(res, true);
           }
         }
@@ -1113,9 +1111,9 @@ impl InstTrait for Instruction {
         if self.code == 0xE6 {
           // AND n
           let src_val = (self.data & 0xff) as u8;
-          let val = read_reg8("A");
+          let val = read_reg8(&Reg::A);
           let res = val & src_val;
-          write_reg8("A", res);
+          write_reg8(&Reg::A, res);
           update_flags_for_logical_op(res, true);
         }
         else {
@@ -1129,12 +1127,12 @@ impl InstTrait for Instruction {
     else if self.table == "ix" && self.len == 1 {
       if self.code == 0xA6 {
         // AND IX+d
-        let val = read_reg8("A");
-        let addr = read_reg16("IX");
+        let val = read_reg8(&Reg::A);
+        let addr = read_reg16(&Reg::IX);
         let src_addr = calc_address_with_offset(addr, self.data as u8);
         let src_val = Memory::read8(src_addr);
         let res = val & src_val;
-        write_reg8("A", res);
+        write_reg8(&Reg::A, res);
         update_flags_for_logical_op(res, true);
       }
       else {
@@ -1144,12 +1142,12 @@ impl InstTrait for Instruction {
     else if self.table == "iy" && self.len == 1 {
       if self.code == 0xA6 {
         // AND IY+d
-        let val = read_reg8("A");
-        let addr = read_reg16("IY");
+        let val = read_reg8(&Reg::A);
+        let addr = read_reg16(&Reg::IY);
         let src_addr = calc_address_with_offset(addr, self.data as u8);
         let src_val = Memory::read8(src_addr);
         let res = val & src_val;
-        write_reg8("A", res);
+        write_reg8(&Reg::A, res);
         update_flags_for_logical_op(res, true);
       }
       else {
@@ -1167,22 +1165,22 @@ impl InstTrait for Instruction {
       if self.len == 0 {
         if self.code & 0xF8 == 0xB0 {
           // OR r
-          let reg_map = ["B", "C", "D", "E", "H", "L", "(HL)", "A"];
+          let reg_map = [Reg::B, Reg::C, Reg::D, Reg::E, Reg::H, Reg::L, Reg::HL, Reg::A];
           let r = self.code & 0x07;
-          let src_reg = reg_map[r as usize];
-          let val = read_reg8("A");
-          if src_reg == "(HL)" {
+          let src_reg = &reg_map[r as usize];
+          let val = read_reg8(&Reg::A);
+          if matches!(src_reg, Reg::HL) {
             // OR (HL)
-            let src_addr = read_reg16("HL");
+            let src_addr = read_reg16(&Reg::HL);
             let src_val = Memory::read8(src_addr);
             let res = val | src_val;
-            write_reg8("A", res);
+            write_reg8(&Reg::A, res);
             update_flags_for_logical_op(res, false);
           }
           else {
-            let src_val = read_reg8(src_reg);
+            let src_val = read_reg8(&src_reg);
             let res = val | src_val;
-            write_reg8("A", res);
+            write_reg8(&Reg::A, res);
             update_flags_for_logical_op(res, false);
           }
         }
@@ -1194,9 +1192,9 @@ impl InstTrait for Instruction {
         if self.code == 0xF6 {
           // OR n
           let src_val = (self.data & 0xff) as u8;
-          let val = read_reg8("A");
+          let val = read_reg8(&Reg::A);
           let res = val | src_val;
-          write_reg8("A", res);
+          write_reg8(&Reg::A, res);
           update_flags_for_logical_op(res, false);
         }
         else {
@@ -1210,12 +1208,12 @@ impl InstTrait for Instruction {
     else if self.table == "ix" && self.len == 1 {
       if self.code == 0xB6 {
         // OR IX+d
-        let val = read_reg8("A");
-        let addr = read_reg16("IX");
+        let val = read_reg8(&Reg::A);
+        let addr = read_reg16(&Reg::IX);
         let src_addr = calc_address_with_offset(addr, self.data as u8);
         let src_val = Memory::read8(src_addr);
         let res = val | src_val;
-        write_reg8("A", res);
+        write_reg8(&Reg::A, res);
         update_flags_for_logical_op(res, false);
       }
       else {
@@ -1225,12 +1223,12 @@ impl InstTrait for Instruction {
     else if self.table == "iy" && self.len == 1 {
       if self.code == 0xB6 {
         // OR IY+d
-        let val = read_reg8("A");
-        let addr = read_reg16("IY");
+        let val = read_reg8(&Reg::A);
+        let addr = read_reg16(&Reg::IY);
         let src_addr = calc_address_with_offset(addr, self.data as u8);
         let src_val = Memory::read8(src_addr);
         let res = val | src_val;
-        write_reg8("A", res);
+        write_reg8(&Reg::A, res);
         update_flags_for_logical_op(res, false);
       }
       else {
@@ -1248,22 +1246,22 @@ impl InstTrait for Instruction {
       if self.len == 0 {
         if self.code & 0xF8 == 0xA8 {
           // XOR r
-          let reg_map = ["B", "C", "D", "E", "H", "L", "(HL)", "A"];
+          let reg_map = [Reg::B, Reg::C, Reg::D, Reg::E, Reg::H, Reg::L, Reg::HL, Reg::A];
           let r = self.code & 0x07;
-          let src_reg = reg_map[r as usize];
-          let val = read_reg8("A");
-          if src_reg == "(HL)" {
+          let src_reg = &reg_map[r as usize];
+          let val = read_reg8(&Reg::A);
+          if matches!(src_reg, Reg::HL) {
             // XOR (HL)
-            let src_addr = read_reg16("HL");
+            let src_addr = read_reg16(&Reg::HL);
             let src_val = Memory::read8(src_addr);
             let res = val ^ src_val;
-            write_reg8("A", res);
+            write_reg8(&Reg::A, res);
             update_flags_for_logical_op(res, false);
           }
           else {
-            let src_val = read_reg8(src_reg);
+            let src_val = read_reg8(&src_reg);
             let res = val ^ src_val;
-            write_reg8("A", res);
+            write_reg8(&Reg::A, res);
             update_flags_for_logical_op(res, false);
           }
         }
@@ -1275,9 +1273,9 @@ impl InstTrait for Instruction {
         if self.code == 0xEE {
           // XOR n
           let src_val = (self.data & 0xff) as u8;
-          let val = read_reg8("A");
+          let val = read_reg8(&Reg::A);
           let res = val ^ src_val;
-          write_reg8("A", res);
+          write_reg8(&Reg::A, res);
           update_flags_for_logical_op(res, false);
         }
         else {
@@ -1291,12 +1289,12 @@ impl InstTrait for Instruction {
     else if self.table == "ix" && self.len == 1 {
       if self.code == 0xAE {
         // XOR IX+d
-        let val = read_reg8("A");
-        let addr = read_reg16("IX");
+        let val = read_reg8(&Reg::A);
+        let addr = read_reg16(&Reg::IX);
         let src_addr = calc_address_with_offset(addr, self.data as u8);
         let src_val = Memory::read8(src_addr);
         let res = val ^ src_val;
-        write_reg8("A", res);
+        write_reg8(&Reg::A, res);
         update_flags_for_logical_op(res, false);
       }
       else {
@@ -1306,12 +1304,12 @@ impl InstTrait for Instruction {
     else if self.table == "iy" && self.len == 1 {
       if self.code == 0xAE {
         // XOR IY+d
-        let val = read_reg8("A");
-        let addr = read_reg16("IY");
+        let val = read_reg8(&Reg::A);
+        let addr = read_reg16(&Reg::IY);
         let src_addr = calc_address_with_offset(addr, self.data as u8);
         let src_val = Memory::read8(src_addr);
         let res = val ^ src_val;
-        write_reg8("A", res);
+        write_reg8(&Reg::A, res);
         update_flags_for_logical_op(res, false);
       }
       else {
@@ -1329,18 +1327,18 @@ impl InstTrait for Instruction {
       if self.len == 0 {
         if self.code & 0xF8 == 0xB8 {
           // CP r
-          let reg_map = ["B", "C", "D", "E", "H", "L", "(HL)", "A"];
+          let reg_map = [Reg::B, Reg::C, Reg::D, Reg::E, Reg::H, Reg::L, Reg::HL, Reg::A];
           let r = self.code & 0x07;
-          let src_reg = reg_map[r as usize];
-          let val1 = read_reg8("A");
-          if src_reg == "(HL)" {
+          let src_reg = &reg_map[r as usize];
+          let val1 = read_reg8(&Reg::A);
+          if matches!(src_reg, Reg::HL) {
             // CP (HL)
-            let src_addr = read_reg16("HL");
+            let src_addr = read_reg16(&Reg::HL);
             let val2 = Memory::read8(src_addr);
             update_flags_for_compare8(val1, val2);
           }
           else {
-            let val2 = read_reg8(src_reg);
+            let val2 = read_reg8(&src_reg);
             update_flags_for_compare8(val1, val2);
           }
         }
@@ -1351,7 +1349,7 @@ impl InstTrait for Instruction {
       else if self.len == 1 {
         if self.code == 0xFE {
           // CP n
-          let val1 = read_reg8("A");
+          let val1 = read_reg8(&Reg::A);
           let val2 = (self.data & 0xff) as u8;
           update_flags_for_compare8(val1, val2);
         }
@@ -1366,8 +1364,8 @@ impl InstTrait for Instruction {
     else if self.table == "ix" && self.len == 1 {
       if self.code == 0xBE {
         // CP IX+d
-        let val1 = read_reg8("A");
-        let addr = read_reg16("IX");
+        let val1 = read_reg8(&Reg::A);
+        let addr = read_reg16(&Reg::IX);
         let src_addr = calc_address_with_offset(addr, self.data as u8);
         let val2 = Memory::read8(src_addr);
         update_flags_for_compare8(val1, val2);
@@ -1379,8 +1377,8 @@ impl InstTrait for Instruction {
     else if self.table == "iy" && self.len == 1 {
       if self.code == 0xBE {
         // CP IY+d
-        let val1 = read_reg8("A");
-        let addr = read_reg16("IY");
+        let val1 = read_reg8(&Reg::A);
+        let addr = read_reg16(&Reg::IY);
         let src_addr = calc_address_with_offset(addr, self.data as u8);
         let val2 = Memory::read8(src_addr);
         update_flags_for_compare8(val1, val2);
@@ -1476,41 +1474,41 @@ impl InstTrait for Instruction {
       if self.code == 0xC3 {
         // JP nn
         let dst_addr = self.data;
-        write_reg16("PC", dst_addr);
+        write_reg16(&Reg::PC, dst_addr);
       }
       else if self.code == 0xE9 {
         // JP (HL)
-        let hl = read_reg16("HL");
+        let hl = read_reg16(&Reg::HL);
         let dst_addr = Memory::read16(hl);
-        write_reg16("PC", dst_addr);
+        write_reg16(&Reg::PC, dst_addr);
       }
       else if self.code & 0xC7 == 0xC2 {
         // JP cc,nn
         let dst_addr = self.data;
         let cc_val = (self.code & 0x38) >> 3;
         let cc = Register::condition_code_for(cc_val);
-        let flags = read_reg8("F");
+        let flags = read_reg8(&Reg::F);
         let should_jump = Register::check_condition(cc, flags);
         if should_jump {
-          write_reg16("PC", dst_addr);
+          write_reg16(&Reg::PC, dst_addr);
           Cpu::set_acitve_cycles(self.cycles.0);
         }
       }
       else if self.table == "ix" {
         if self.code == 0xE9 {
           // JP (IX)
-          let hl = read_reg16("IX");
+          let hl = read_reg16(&Reg::IX);
           let dst_addr = Memory::read16(hl);
-          write_reg16("PC", dst_addr);
+          write_reg16(&Reg::PC, dst_addr);
           Cpu::set_acitve_cycles(self.cycles.0);
         }
       }
       else if self.table == "iy" {
         if self.code == 0xE9 {
           // JP (IY)
-          let hl = read_reg16("IY");
+          let hl = read_reg16(&Reg::IY);
           let dst_addr = Memory::read16(hl);
-          write_reg16("PC", dst_addr);
+          write_reg16(&Reg::PC, dst_addr);
           Cpu::set_acitve_cycles(self.cycles.0);
         }
       }
@@ -1523,37 +1521,37 @@ impl InstTrait for Instruction {
   // JR Instruction
   fn jr(&self) {
     if self.table == "main" {
-      let addr = Cpu::get_register16("PC");
+      let addr = Cpu::get_register16(Reg::PC);
       let dst_addr = calc_address_with_offset(addr, self.data as u8);
       if self.code == 0x18 {
         // JR d
-        write_reg16("PC", dst_addr);
+        write_reg16(&Reg::PC, dst_addr);
       }
       else if self.code == 0x20 {
         // JR NZ
         if !is_flag_set(Flag::Z) {
-          write_reg16("PC", dst_addr);
+          write_reg16(&Reg::PC, dst_addr);
           Cpu::set_acitve_cycles(self.cycles.0);
         }
       }
       else if self.code == 0x28 {
         // JR Z
         if is_flag_set(Flag::Z) {
-          write_reg16("PC", dst_addr);
+          write_reg16(&Reg::PC, dst_addr);
           Cpu::set_acitve_cycles(self.cycles.0);
         }
       }
       else if self.code == 0x30 {
         // JR NC
         if !is_flag_set(Flag::C) {
-          write_reg16("PC", dst_addr);
+          write_reg16(&Reg::PC, dst_addr);
           Cpu::set_acitve_cycles(self.cycles.0);
         }
       }
       else if self.code == 0x38 {
         // JR C
         if is_flag_set(Flag::C) {
-          write_reg16("PC", dst_addr);
+          write_reg16(&Reg::PC, dst_addr);
           Cpu::set_acitve_cycles(self.cycles.0);
         }
       }
@@ -1572,28 +1570,28 @@ impl InstTrait for Instruction {
       if self.len == 2 {
         if self.code == 0xCD { 
           // CALL nn
-          let val = read_reg16("PC");
-          let mut addr = read_reg16("SP");
+          let val = read_reg16(&Reg::PC);
+          let mut addr = read_reg16(&Reg::SP);
           addr = ((addr as i32) - 2) as u16;
-          write_reg16("SP", addr);
+          write_reg16(&Reg::SP, addr);
           Memory::write16(addr, val);
           let dst_addr = self.data;
-          write_reg16("PC", dst_addr);
+          write_reg16(&Reg::PC, dst_addr);
         }
         else if self.code & 0xC7 == 0xC4 {
           // CALL cc,nn
           let cc_val = (self.code & 0x38) >> 3;
           let cc = Register::condition_code_for(cc_val);
-          let flags = read_reg8("F");
+          let flags = read_reg8(&Reg::F);
           let should_call = Register::check_condition(cc, flags);
           if should_call {
-            let val = read_reg16("PC");
-            let mut addr = read_reg16("SP");
+            let val = read_reg16(&Reg::PC);
+            let mut addr = read_reg16(&Reg::SP);
             addr = ((addr as i32) - 2) as u16;
-            write_reg16("SP", addr);
+            write_reg16(&Reg::SP, addr);
             Memory::write16(addr, val);
             let dst_addr = self.data;
-            write_reg16("PC", dst_addr);
+            write_reg16(&Reg::PC, dst_addr);
             Cpu::set_acitve_cycles(self.cycles.0);
           }
           else {
@@ -1617,13 +1615,13 @@ impl InstTrait for Instruction {
   fn djnz(&self) {
     if self.table == "main" && self.len == 1 {
       if self.code == 0x10 {
-        let mut b = read_reg8("B");
+        let mut b = read_reg8(&Reg::B);
         b = dec_u8_wrap(b);
-        write_reg8("B", b);
+        write_reg8(&Reg::B, b);
         if b != 0 {
-          let mut pc = read_reg16("PC");
+          let mut pc = read_reg16(&Reg::PC);
           pc = calc_address_with_offset(pc, self.data as u8);
-          write_reg16("PC", pc);
+          write_reg16(&Reg::PC, pc);
           Cpu::set_acitve_cycles(self.cycles.0);
         }
         else {
@@ -1644,22 +1642,22 @@ impl InstTrait for Instruction {
     if self.table == "main" && self.len == 0 {
       if self.code == 0xC9 {
         // RET
-        let sp = read_reg16("SP");
+        let sp = read_reg16(&Reg::SP);
         let pc = Memory::read16(sp);
-        write_reg16("SP", ((sp as u32) + 2) as u16);
-        write_reg16("PC", pc);
+        write_reg16(&Reg::SP, ((sp as u32) + 2) as u16);
+        write_reg16(&Reg::PC, pc);
       }
       else if self.code & 0xC7 == 0xC0 {
         // RET cc
         let cc_val = (self.code & 0x38) >> 3;
         let cc = Register::condition_code_for(cc_val);
-        let flags = read_reg8("F");
+        let flags = read_reg8(&Reg::F);
         let should_return = Register::check_condition(cc, flags);
         if should_return {
-          let sp = read_reg16("SP");
+          let sp = read_reg16(&Reg::SP);
           let pc = Memory::read16(sp);
-          write_reg16("SP", ((sp as u32) + 2) as u16);
-          write_reg16("PC", pc);
+          write_reg16(&Reg::SP, ((sp as u32) + 2) as u16);
+          write_reg16(&Reg::PC, pc);
           Cpu::set_acitve_cycles(self.cycles.0);
         }
         else {
@@ -1691,15 +1689,15 @@ impl InstTrait for Instruction {
   fn ldi(&self) {
     if self.table == "misc" {
       if self.code == 0xA0 {
-        let de = read_reg16("DE");
-        let hl = read_reg16("HL");
-        let mut bc = read_reg16("BC");
+        let de = read_reg16(&Reg::DE);
+        let hl = read_reg16(&Reg::HL);
+        let mut bc = read_reg16(&Reg::BC);
         let val = Memory::read8(hl);
         Memory::write8(de, val);
-        write_reg16("DE", inc_u16_wrap(de));
-        write_reg16("HL", inc_u16_wrap(hl));
+        write_reg16(&Reg::DE, inc_u16_wrap(de));
+        write_reg16(&Reg::HL, inc_u16_wrap(hl));
         bc = dec_u16_wrap(bc);
-        write_reg16("BC", bc);
+        write_reg16(&Reg::BC, bc);
         clear_flag(Flag::H);
         clear_flag(Flag::N);
         if dec_u16_wrap(bc) != 0x0000 {
@@ -1722,19 +1720,19 @@ impl InstTrait for Instruction {
   fn ldir(&self) {
     if self.table == "misc" {
       if self.code == 0xB0 {
-        let de = read_reg16("DE");
-        let hl = read_reg16("HL");
-        let mut bc = read_reg16("BC");
+        let de = read_reg16(&Reg::DE);
+        let hl = read_reg16(&Reg::HL);
+        let mut bc = read_reg16(&Reg::BC);
         let val = Memory::read8(hl);
         Memory::write8(de, val);
-        write_reg16("DE", inc_u16_wrap(de));
-        write_reg16("HL", inc_u16_wrap(hl));
+        write_reg16(&Reg::DE, inc_u16_wrap(de));
+        write_reg16(&Reg::HL, inc_u16_wrap(hl));
         bc = dec_u16_wrap(bc);
-        write_reg16("BC", bc);
+        write_reg16(&Reg::BC, bc);
         if bc != 0x00 {
-          let mut pc = read_reg16("PC");
+          let mut pc = read_reg16(&Reg::PC);
           pc = calc_address_with_offset(pc, 0xfe);
-          write_reg16("PC", pc);
+          write_reg16(&Reg::PC, pc);
           Cpu::set_acitve_cycles(self.cycles.0);
         }
         else {
@@ -1762,15 +1760,15 @@ impl InstTrait for Instruction {
   fn ldd(&self) {
     if self.table == "misc" {
       if self.code == 0xA8 {
-        let de = read_reg16("DE");
-        let hl = read_reg16("HL");
-        let mut bc = read_reg16("BC");
+        let de = read_reg16(&Reg::DE);
+        let hl = read_reg16(&Reg::HL);
+        let mut bc = read_reg16(&Reg::BC);
         let val = Memory::read8(hl);
         Memory::write8(de, val);
-        write_reg16("DE", dec_u16_wrap(de));
-        write_reg16("HL", dec_u16_wrap(hl));
+        write_reg16(&Reg::DE, dec_u16_wrap(de));
+        write_reg16(&Reg::HL, dec_u16_wrap(hl));
         bc = dec_u16_wrap(bc);
-        write_reg16("BC", bc);
+        write_reg16(&Reg::BC, bc);
         clear_flag(Flag::H);
         clear_flag(Flag::N);
         if dec_u16_wrap(bc) != 0x0000 {
@@ -1793,19 +1791,19 @@ impl InstTrait for Instruction {
   fn lddr(&self) {
     if self.table == "misc" {
       if self.code == 0xB8 {
-        let de = read_reg16("DE");
-        let hl = read_reg16("HL");
-        let mut bc = read_reg16("BC");
+        let de = read_reg16(&Reg::DE);
+        let hl = read_reg16(&Reg::HL);
+        let mut bc = read_reg16(&Reg::BC);
         let val = Memory::read8(hl);
         Memory::write8(de, val);
-        write_reg16("DE", dec_u16_wrap(de));
-        write_reg16("HL", dec_u16_wrap(hl));
+        write_reg16(&Reg::DE, dec_u16_wrap(de));
+        write_reg16(&Reg::HL, dec_u16_wrap(hl));
         bc = dec_u16_wrap(bc);
-        write_reg16("BC", bc);
+        write_reg16(&Reg::BC, bc);
         if bc != 0x00 {
-          let mut pc = read_reg16("PC");
+          let mut pc = read_reg16(&Reg::PC);
           pc = calc_address_with_offset(pc, 0xfe);
-          write_reg16("PC", pc);
+          write_reg16(&Reg::PC, pc);
           Cpu::set_acitve_cycles(self.cycles.0);
         }
         else {
@@ -1828,13 +1826,13 @@ impl InstTrait for Instruction {
   fn cpi(&self) {
     if self.table == "misc" {
       if self.code == 0xA1 {
-        let a = read_reg8("A");
-        let hl = read_reg16("HL");
-        let mut bc = read_reg16("BC");
+        let a = read_reg8(&Reg::A);
+        let hl = read_reg16(&Reg::HL);
+        let mut bc = read_reg16(&Reg::BC);
         let val = Memory::read8(hl);
-        write_reg16("HL", inc_u16_wrap(hl));
+        write_reg16(&Reg::HL, inc_u16_wrap(hl));
         bc = dec_u16_wrap(bc);
-        write_reg16("BC", bc);
+        write_reg16(&Reg::BC, bc);
         let res = ((a as i16) - (val as i16)) as u16;
         if res & 0x80 == 0x80 {
           set_flag(Flag::S);
@@ -1875,18 +1873,18 @@ impl InstTrait for Instruction {
   fn cpir(&self) {
     if self.table == "misc" {
       if self.code == 0xB1 {
-        let a = read_reg8("A");
-        let hl = read_reg16("HL");
-        let mut bc = read_reg16("BC");
+        let a = read_reg8(&Reg::A);
+        let hl = read_reg16(&Reg::HL);
+        let mut bc = read_reg16(&Reg::BC);
         let val = Memory::read8(hl);
-        write_reg16("HL", inc_u16_wrap(hl));
+        write_reg16(&Reg::HL, inc_u16_wrap(hl));
         bc = dec_u16_wrap(bc);
-        write_reg16("BC", bc);
+        write_reg16(&Reg::BC, bc);
         let res = ((a as i16) - (val as i16)) as u16;
         if bc != 0x00 && res != 0x0000 {
-          let mut pc = read_reg16("PC");
+          let mut pc = read_reg16(&Reg::PC);
           pc = calc_address_with_offset(pc, 0xfe);
-          write_reg16("PC", pc);
+          write_reg16(&Reg::PC, pc);
           Cpu::set_acitve_cycles(self.cycles.0);
         }
         else {
@@ -1931,13 +1929,13 @@ impl InstTrait for Instruction {
   fn cpd(&self) {
     if self.table == "misc" {
       if self.code == 0xA9 {
-        let a = read_reg8("A");
-        let hl = read_reg16("HL");
-        let mut bc = read_reg16("BC");
+        let a = read_reg8(&Reg::A);
+        let hl = read_reg16(&Reg::HL);
+        let mut bc = read_reg16(&Reg::BC);
         let val = Memory::read8(hl);
-        write_reg16("HL", dec_u16_wrap(hl));
+        write_reg16(&Reg::HL, dec_u16_wrap(hl));
         bc = dec_u16_wrap(bc);
-        write_reg16("BC", bc);
+        write_reg16(&Reg::BC, bc);
         let res = ((a as i16) - (val as i16)) as u16;
         if res & 0x80 == 0x80 {
           set_flag(Flag::S);
@@ -1978,18 +1976,18 @@ impl InstTrait for Instruction {
   fn cpdr(&self) {
     if self.table == "misc" {
       if self.code == 0xA9 {
-        let a = read_reg8("A");
-        let hl = read_reg16("HL");
-        let mut bc = read_reg16("BC");
+        let a = read_reg8(&Reg::A);
+        let hl = read_reg16(&Reg::HL);
+        let mut bc = read_reg16(&Reg::BC);
         let val = Memory::read8(hl);
-        write_reg16("HL", dec_u16_wrap(hl));
+        write_reg16(&Reg::HL, dec_u16_wrap(hl));
         bc = dec_u16_wrap(bc);
-        write_reg16("BC", bc);
+        write_reg16(&Reg::BC, bc);
         let res = ((a as i16) - (val as i16)) as u16;
         if bc != 0x00 && res != 0x0000 {
-          let mut pc = read_reg16("PC");
+          let mut pc = read_reg16(&Reg::PC);
           pc = calc_address_with_offset(pc, 0xfe);
-          write_reg16("PC", pc);
+          write_reg16(&Reg::PC, pc);
           Cpu::set_acitve_cycles(self.cycles.0);
         }
         else {

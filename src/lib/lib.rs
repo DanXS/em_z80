@@ -9,6 +9,7 @@ extern crate core;
 
 use std::io;
 use registers::Flag;
+use registers::Reg;
 use crate::cpu::Cpu;
 use crate::memory::Memory;
 
@@ -53,23 +54,27 @@ pub fn set_pc(addr: u16) {
 }
 
 // Get a 8 bit register value
-pub fn get_register8(reg: &str) -> u8 {
+pub fn get_register8(reg: Reg) -> u8 {
   Cpu::get_register8(reg)
 }
 
 // Set a 8 bit register to a specified value
-pub fn set_register8(reg: &str, val: u8) {
+pub fn set_register8(reg: Reg, val: u8) {
   Cpu::set_register8(reg, val);
 }
 
 // Get a 16 bit register value
-pub fn get_register16(reg: &str) -> u16 {
+pub fn get_register16(reg: Reg) -> u16 {
   Cpu::get_register16(reg)
 }
 
 // Set a 16 bit register to a specified value
-pub fn set_register16(reg: &str, val: u16) {
+pub fn set_register16(reg: Reg, val: u16) {
   Cpu::set_register16(reg, val);
+}
+
+pub fn get_register_from_str(reg_str: &str) -> Reg {
+  Cpu::get_register_from_str(reg_str)
 }
 
 // Set the status flag
