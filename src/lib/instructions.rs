@@ -345,12 +345,21 @@ impl InstTrait for Instruction {
           }
         }
         else if self.len == 2 {
-          // LD (IX+d),n
-          let d = self.data as u8;
-          let val = ((self.data >> 8) & 0x00FF) as u8;
-          let addr = read_reg16(&Reg::IX);
-          let dst_addr = calc_address_with_offset(addr, d);
-          Memory::write8(dst_addr, val);
+          if self.code == 0x36 {
+            // LD (IX+d),n
+            let d = self.data as u8;
+            let val = ((self.data >> 8) & 0x00FF) as u8;
+            let addr = read_reg16(&Reg::IX);
+            let dst_addr = calc_address_with_offset(addr, d);
+            Memory::write8(dst_addr, val);
+          }
+          else if self.code == 0x21 {
+            // LD IX,nn
+            write_reg16(&Reg::IX, self.data);
+          }
+          else {
+            report_unknown("LD");
+          }
         }
         else {
           report_not_supported("LD");
@@ -400,6 +409,13 @@ impl InstTrait for Instruction {
             let addr = read_reg16(&Reg::IY);
             let dst_addr = calc_address_with_offset(addr, d);
             Memory::write8(dst_addr, val);
+          }
+          else if self.code == 0x21 {
+            // LD IX,nn
+            write_reg16(&Reg::IY, self.data);
+          }
+          else {
+            report_unknown("LD");
           }
         }
         else {
