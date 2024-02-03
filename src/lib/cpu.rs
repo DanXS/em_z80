@@ -647,18 +647,18 @@ impl Cpu {
     // Increment the program counter
     Self::set_pc((((Self::get_pc() as u32) + (opcode.byte_count as u32)) & 0xFFFF) as u16);
     // Run the instruction
-    Self::run_inst(opcode.func, opcode, data, n, opcode.table, opcode.cycles);
+    Self::run_inst(opcode.func, opcode, data, n);
   }
 
-  fn run_inst(f: fn(&Instruction), opcode: &Opcode, data: [u8;2], len: usize, table: &str, cycles: (u8,u8)) {
+  fn run_inst(f: fn(&Instruction), opcode: &Opcode, data: [u8;2], len: usize) {
     // The minimum number of cycles unless changed by the instruction itself
     // For example, branching may take more cycles (cycles.0)
-    Self::set_acitve_cycles(cycles.1);
+    Self::set_acitve_cycles(opcode.cycles.1);
     // Construct the instruction
     let inst = Instruction{code: opcode.code, 
       data: ((data[1] as u16) << 8) | (data[0] as u16), 
-      len: len, table: String::from(table),
-      cycles: cycles};
+      len: len, table: opcode.table,
+      cycles: opcode.cycles};
     // Run the instruction
     f(&inst);
     // Simulate the time it takes for the instruciton to run

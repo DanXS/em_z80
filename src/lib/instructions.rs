@@ -1,4 +1,5 @@
 use crate::memory::Memory;
+use crate::opcodes::TableID;
 use crate::registers::Flag;
 use crate::cpu::Cpu;
 use crate::cpu::*;
@@ -104,7 +105,7 @@ pub struct Instruction {
   pub code: u8,
   pub data: u16,
   pub len: usize,
-  pub table: String,
+  pub table: TableID,
   pub cycles: (u8,u8)
 }
 
@@ -119,7 +120,7 @@ impl InstTrait for Instruction {
 
   // LD instruction
   fn ld(&self) {
-    if self.table == "main" {
+    if matches!(self.table, TableID::MAIN) {
       if self.len == 0 {
         let reg_map = [Reg::B, Reg::C, Reg::D, Reg::E, Reg::H, Reg::L, Reg::HL, Reg::A];
         if self.code & 0xC0 == 0x40 {
@@ -249,7 +250,7 @@ impl InstTrait for Instruction {
         }
       }
     }
-    else if self.table == "misc" {
+    else if matches!(self.table, TableID::MISC) {
       if self.len == 0 {
         if self.code == 0x47 {
           // LD I,A
@@ -306,7 +307,7 @@ impl InstTrait for Instruction {
         report_unknown("LD");
       }
     }
-    else if self.table == "ix" {
+    else if matches!(self.table, TableID::IX) {
       if self.len == 1 {
         if self.code & 0xC7 == 0x46 { 
           // LD r,(IX+d)
@@ -354,7 +355,7 @@ impl InstTrait for Instruction {
         report_not_supported("LD");
       }
     }
-    else if self.table == "iy" {
+    else if matches!(self.table, TableID::IY) {
       if self.len == 1 {
         if self.code & 0xC7 == 0x46 { 
           // LD r,(IY+d)
@@ -410,7 +411,7 @@ impl InstTrait for Instruction {
   }
 
   fn ex(&self) {
-    if self.table == "main" {
+    if matches!(self.table, TableID::MAIN) {
       if self.code == 0xEB {
         // EX DE, HL
         let de = read_reg16(&Reg::DE);
@@ -443,7 +444,7 @@ impl InstTrait for Instruction {
   }
 
   fn exx(&self) {
-    if self.table == "main" {
+    if matches!(self.table, TableID::MAIN) {
       if self.code == 0xD9 {
         // EXX
         let bc = read_reg16(&Reg::BC);
@@ -470,7 +471,7 @@ impl InstTrait for Instruction {
 
   // INC instruction
   fn inc(&self) {
-    if self.table == "main" {
+    if matches!(self.table, TableID::MAIN) {
       if self.code & 0xC7 == 0x04 {
         // INC r
         let reg_map = [Reg::B, Reg::C, Reg::D, Reg::E, Reg::H, Reg::L, Reg::HL, Reg::A];
@@ -502,7 +503,7 @@ impl InstTrait for Instruction {
         report_unknown("INC");
       }
     }
-    else if self.table == "ix" {
+    else if matches!(self.table, TableID::IX) {
       if self.len == 0 && self.code == 0x23 {
         // INC IX
         let val = read_reg16(&Reg::IX);
@@ -521,7 +522,7 @@ impl InstTrait for Instruction {
         report_unknown("INC")
       }
     }
-    else if self.table == "iy" {
+    else if matches!(self.table, TableID::IY) {
       if self.len == 0 && self.code == 0x23 {
         // INC IY
         let val = read_reg16(&Reg::IY);
@@ -547,7 +548,7 @@ impl InstTrait for Instruction {
 
   // DEC instruction
   fn dec(&self) {
-    if self.table == "main" {
+    if matches!(self.table, TableID::MAIN) {
       if self.code & 0xC7 == 0x05 {
         let reg_map = [Reg::B, Reg::C, Reg::D, Reg::E, Reg::H, Reg::L, Reg::HL, Reg::A];
         let dst = ((self.code & 0x38) >> 3) as usize;
@@ -580,13 +581,13 @@ impl InstTrait for Instruction {
         report_unknown("DEC");
       }
     }
-    else if self.table == "ix" {
+    else if matches!(self.table, TableID::IX) {
       if self.len == 0 && self.code == 0x2B {
         // DEX IX
         let val = read_reg16(&Reg::IX);
         write_reg16(&Reg::IX, dec_u16_wrap(val));
       }
-      if self.len == 1 && self.code == 0x34 {
+      if self.len == 1 && self.code == 0x35 {
         // DEC (IX + d)
         let addr = read_reg16(&Reg::IX);
         let src_addr = calc_address_with_offset(addr, self.data as u8);
@@ -596,16 +597,16 @@ impl InstTrait for Instruction {
         update_flags_for_dec(val,dec_val);
       }
       else {
-        report_unknown("INC")
+        report_unknown("DEC")
       }
     }
-    else if self.table == "iy" {
+    else if matches!(self.table, TableID::IY) {
       if self.len == 0 && self.code == 0x2B {
         // DEX IY
         let val = read_reg16(&Reg::IY);
         write_reg16(&Reg::IY, dec_u16_wrap(val));
       }
-      if self.len == 1 && self.code == 0x34 {
+      if self.len == 1 && self.code == 0x35 {
         // DEC (IY + d)
         let addr = read_reg16(&Reg::IY);
         let src_addr = calc_address_with_offset(addr, self.data as u8);
@@ -615,7 +616,7 @@ impl InstTrait for Instruction {
         update_flags_for_dec(val, dec_val);
       }
       else {
-        report_unknown("INC")
+        report_unknown("DEC")
       }
     }
     else {
@@ -625,7 +626,7 @@ impl InstTrait for Instruction {
 
   // PUSH Instruction
   fn push(&self) {
-    if self.table == "main" && self.code & 0xCF == 0xC5 {
+    if matches!(self.table, TableID::MAIN) && self.code & 0xCF == 0xC5 {
       // PUSH rr
       let reg_map = [Reg::BC, Reg::DE, Reg::HL, Reg::SP];
       let src = ((self.code & 0x30) >> 4) as usize;
@@ -636,7 +637,7 @@ impl InstTrait for Instruction {
       write_reg16(&Reg::SP, addr);
       Memory::write16(addr, val);
     }
-    else if self.table == "ix" && self.code == 0xE5 {
+    else if matches!(self.table, TableID::IX) && self.code == 0xE5 {
       // PUSH IX
       let val = read_reg16(&Reg::IX);
       let mut addr = read_reg16(&Reg::SP);
@@ -644,7 +645,7 @@ impl InstTrait for Instruction {
       write_reg16(&Reg::SP, addr);
       Memory::write16(addr, val);
     }
-    else if self.table == "iy" && self.code == 0xE5 {
+    else if matches!(self.table, TableID::IY) && self.code == 0xE5 {
       // PUSH IY
       let val = read_reg16(&Reg::IY);
       let mut addr = read_reg16(&Reg::SP);
@@ -659,7 +660,7 @@ impl InstTrait for Instruction {
 
   // POP Instruction
   fn pop(&self) {
-    if self.table == "main" && self.code & 0xCF == 0xC1 {
+    if matches!(self.table, TableID::MAIN) && self.code & 0xCF == 0xC1 {
       // POP rr
       let reg_map = [Reg::BC, Reg::DE, Reg::HL, Reg::SP];
       let rr = ((self.code & 0x30) >> 4) as usize;
@@ -670,7 +671,7 @@ impl InstTrait for Instruction {
       addr = ((addr as u32) + 2) as u16;
       write_reg16(&Reg::SP, addr);
     }
-    else if self.table == "ix" && self.code == 0xE1 {
+    else if matches!(self.table, TableID::IX) && self.code == 0xE1 {
       // POP IX
       let mut addr = read_reg16(&Reg::SP);
       let val = Memory::read16(addr);
@@ -678,7 +679,7 @@ impl InstTrait for Instruction {
       addr = ((addr as u32) + 2) as u16;
       write_reg16(&Reg::SP, addr);
     }
-    else if self.table == "iy" && self.code == 0xE1 {
+    else if matches!(self.table, TableID::IY) && self.code == 0xE1 {
       // POP IY
       let mut addr = read_reg16(&Reg::SP);
       let val = Memory::read16(addr);
@@ -693,7 +694,7 @@ impl InstTrait for Instruction {
 
   // ADD Instruction
   fn add(&self) {
-    if self.table == "main" {
+    if matches!(self.table, TableID::MAIN) {
       if self.len == 0 {
         if self.code & 0xF8 == 0x80 {
           // ADD A,r
@@ -746,7 +747,7 @@ impl InstTrait for Instruction {
         report_unknown("ADD");
       }
     }
-    else if self.table == "ix" {
+    else if matches!(self.table, TableID::IX) {
       if self.code == 0x86 {
         // ADD A, (IX + d)
         let val1 = read_reg8(&Reg::A);
@@ -771,7 +772,7 @@ impl InstTrait for Instruction {
         report_unknown("ADD");
       }
     }
-    else if self.table == "iy" {
+    else if matches!(self.table, TableID::IY) {
       if self.code == 0x86 {
         // ADD A, (IY + d)
         let val1 = read_reg8(&Reg::A);
@@ -807,7 +808,7 @@ impl InstTrait for Instruction {
       if is_flag_set(Flag::C) { 1 }
       else { 0 }
     };
-    if self.table == "main" {
+    if matches!(self.table, TableID::MAIN) {
       if self.len == 0 {
         if self.code & 0xF8 == 0x88 {
           // ADC A,r
@@ -849,7 +850,7 @@ impl InstTrait for Instruction {
         report_unknown("ADC");
       }
     }
-    else if self.table == "misc" {
+    else if matches!(self.table, TableID::MISC) {
       if self.code & 0xCF == 0x4A {
         // ADC HL,rr
         let reg_map = [Reg::BC, Reg::DE, Reg::HL, Reg::SP];
@@ -865,7 +866,7 @@ impl InstTrait for Instruction {
         report_unknown("ADC");
       }
     }
-    else if self.table == "ix" {
+    else if matches!(self.table, TableID::IX) {
       // ADC A, (IX + d)
       if self.code == 0x8E {
         let val1 = read_reg8(&Reg::A);
@@ -877,7 +878,7 @@ impl InstTrait for Instruction {
         update_flags_for_addition8(val1, u8_plus_carry_wrap(val2, carry), res);
       }
     }
-    else if self.table == "iy" {
+    else if matches!(self.table, TableID::IY) {
       // ADC A, (IY + d)
       if self.code == 0x8E {
         let val1 = read_reg8(&Reg::A);
@@ -896,7 +897,7 @@ impl InstTrait for Instruction {
 
   // SUB Instruction
   fn sub(&self) {
-    if self.table == "main" {
+    if matches!(self.table, TableID::MAIN) {
       if self.len == 0 {
         if self.code & 0xF8 == 0x90 {
           // SUB A,r
@@ -938,7 +939,7 @@ impl InstTrait for Instruction {
         report_unknown("SUB");
       }
     }
-    else if self.table == "ix" {
+    else if matches!(self.table, TableID::IX) {
       // SUB A, (IX + d)
       if self.code == 0x96 {
         let val1 = read_reg8(&Reg::A);
@@ -950,7 +951,7 @@ impl InstTrait for Instruction {
         update_flags_for_subtraction8(val1, val2, res as u16);
       }
     }
-    else if self.table == "iy" {
+    else if matches!(self.table, TableID::IY) {
       // SUB A, (IY + d)
       if self.code == 0x96 {
         let val1 = read_reg8(&Reg::A);
@@ -973,7 +974,7 @@ impl InstTrait for Instruction {
       if is_flag_set(Flag::C) { 1 }
       else { 0 }
     };
-    if self.table == "main" {
+    if matches!(self.table, TableID::MAIN) {
       if self.len == 0 {
         if self.code & 0xF8 == 0x98 {
           // SBC A,r
@@ -1015,7 +1016,7 @@ impl InstTrait for Instruction {
         report_unknown("SBC");
       }
     }
-    else if self.table == "misc" {
+    else if matches!(self.table, TableID::MISC) {
       if self.code & 0xCF == 0x42 {
         // SDC HL,rr
         let reg_map = [Reg::BC, Reg::DE, Reg::HL, Reg::SP];
@@ -1031,7 +1032,7 @@ impl InstTrait for Instruction {
         report_unknown("ADC");
       }
     }
-    else if self.table == "ix" {
+    else if matches!(self.table, TableID::IX) {
       // SBC A, (IX + d)
       if self.code == 0x9E {
         let val1 = read_reg8(&Reg::A);
@@ -1043,7 +1044,7 @@ impl InstTrait for Instruction {
         update_flags_for_subtraction8(val1, u8_plus_carry_wrap(val2, carry), res as u16);
       }
     }
-    else if self.table == "iy" {
+    else if matches!(self.table, TableID::IY) {
       // SBC A, (IY + d)
       if self.code == 0x9E {
         let val1 = read_reg8(&Reg::A);
@@ -1062,7 +1063,7 @@ impl InstTrait for Instruction {
 
   // NEG Instruction
   fn neg(&self) {
-    if self.table == "misc" {
+    if matches!(self.table, TableID::MISC) {
       if self.code == 0x44 {
         let val = read_reg8(&Reg::A);
         let res = -(val as i16);
@@ -1080,7 +1081,7 @@ impl InstTrait for Instruction {
 
   // AND Instruction
   fn and(&self) {
-    if self.table == "main" {
+    if matches!(self.table, TableID::MAIN) {
       if self.len == 0 {
         if self.code & 0xF8 == 0xA0 {
           // AND r
@@ -1124,7 +1125,7 @@ impl InstTrait for Instruction {
         report_unknown("AND");
       }
     }
-    else if self.table == "ix" && self.len == 1 {
+    else if matches!(self.table, TableID::IX) && self.len == 1 {
       if self.code == 0xA6 {
         // AND IX+d
         let val = read_reg8(&Reg::A);
@@ -1139,7 +1140,7 @@ impl InstTrait for Instruction {
         report_unknown("AND");
       }
     }
-    else if self.table == "iy" && self.len == 1 {
+    else if matches!(self.table, TableID::IY) && self.len == 1 {
       if self.code == 0xA6 {
         // AND IY+d
         let val = read_reg8(&Reg::A);
@@ -1161,7 +1162,7 @@ impl InstTrait for Instruction {
 
   // OR Instruction
   fn or(&self) {
-    if self.table == "main" {
+    if matches!(self.table, TableID::MAIN) {
       if self.len == 0 {
         if self.code & 0xF8 == 0xB0 {
           // OR r
@@ -1205,7 +1206,7 @@ impl InstTrait for Instruction {
         report_unknown("OR");
       }
     }
-    else if self.table == "ix" && self.len == 1 {
+    else if matches!(self.table, TableID::IX) && self.len == 1 {
       if self.code == 0xB6 {
         // OR IX+d
         let val = read_reg8(&Reg::A);
@@ -1220,7 +1221,7 @@ impl InstTrait for Instruction {
         report_unknown("OR");
       }
     }
-    else if self.table == "iy" && self.len == 1 {
+    else if matches!(self.table, TableID::IY) && self.len == 1 {
       if self.code == 0xB6 {
         // OR IY+d
         let val = read_reg8(&Reg::A);
@@ -1242,7 +1243,7 @@ impl InstTrait for Instruction {
 
   // XOR Instruction
   fn xor(&self) {
-    if self.table == "main" {
+    if matches!(self.table, TableID::MAIN) {
       if self.len == 0 {
         if self.code & 0xF8 == 0xA8 {
           // XOR r
@@ -1286,7 +1287,7 @@ impl InstTrait for Instruction {
         report_unknown("XOR");
       }
     }
-    else if self.table == "ix" && self.len == 1 {
+    else if matches!(self.table, TableID::IX) && self.len == 1 {
       if self.code == 0xAE {
         // XOR IX+d
         let val = read_reg8(&Reg::A);
@@ -1301,7 +1302,7 @@ impl InstTrait for Instruction {
         report_unknown("XOR");
       }
     }
-    else if self.table == "iy" && self.len == 1 {
+    else if matches!(self.table, TableID::IY) && self.len == 1 {
       if self.code == 0xAE {
         // XOR IY+d
         let val = read_reg8(&Reg::A);
@@ -1323,7 +1324,7 @@ impl InstTrait for Instruction {
 
   // CP Instruction
   fn cp(&self) {
-    if self.table == "main" {
+    if matches!(self.table, TableID::MAIN) {
       if self.len == 0 {
         if self.code & 0xF8 == 0xB8 {
           // CP r
@@ -1361,7 +1362,7 @@ impl InstTrait for Instruction {
         report_unknown("CP");
       }
     }
-    else if self.table == "ix" && self.len == 1 {
+    else if matches!(self.table, TableID::IX) && self.len == 1 {
       if self.code == 0xBE {
         // CP IX+d
         let val1 = read_reg8(&Reg::A);
@@ -1374,7 +1375,7 @@ impl InstTrait for Instruction {
         report_unknown("CP");
       }
     }
-    else if self.table == "iy" && self.len == 1 {
+    else if matches!(self.table, TableID::IY) && self.len == 1 {
       if self.code == 0xBE {
         // CP IY+d
         let val1 = read_reg8(&Reg::A);
@@ -1470,7 +1471,7 @@ impl InstTrait for Instruction {
 
   // JP Instruction
   fn jp(&self) {
-    if self.table == "main" {
+    if matches!(self.table, TableID::MAIN) {
       if self.code == 0xC3 {
         // JP nn
         let dst_addr = self.data;
@@ -1494,7 +1495,7 @@ impl InstTrait for Instruction {
           Cpu::set_acitve_cycles(self.cycles.0);
         }
       }
-      else if self.table == "ix" {
+      else if matches!(self.table, TableID::IX) {
         if self.code == 0xE9 {
           // JP (IX)
           let hl = read_reg16(&Reg::IX);
@@ -1503,7 +1504,7 @@ impl InstTrait for Instruction {
           Cpu::set_acitve_cycles(self.cycles.0);
         }
       }
-      else if self.table == "iy" {
+      else if matches!(self.table, TableID::IY) {
         if self.code == 0xE9 {
           // JP (IY)
           let hl = read_reg16(&Reg::IY);
@@ -1520,7 +1521,7 @@ impl InstTrait for Instruction {
 
   // JR Instruction
   fn jr(&self) {
-    if self.table == "main" {
+    if matches!(self.table, TableID::MAIN) {
       let addr = Cpu::get_register16(Reg::PC);
       let dst_addr = calc_address_with_offset(addr, self.data as u8);
       if self.code == 0x18 {
@@ -1566,7 +1567,7 @@ impl InstTrait for Instruction {
 
   // CALL Instruction
   fn call(&self) {
-    if self.table == "main" {
+    if matches!(self.table, TableID::MAIN) {
       if self.len == 2 {
         if self.code == 0xCD { 
           // CALL nn
@@ -1613,7 +1614,7 @@ impl InstTrait for Instruction {
 
   // DJNZ Instruction
   fn djnz(&self) {
-    if self.table == "main" && self.len == 1 {
+    if matches!(self.table, TableID::MAIN) && self.len == 1 {
       if self.code == 0x10 {
         let mut b = read_reg8(&Reg::B);
         b = dec_u8_wrap(b);
@@ -1639,7 +1640,7 @@ impl InstTrait for Instruction {
 
   // RET Instruciton
   fn ret(&self) {
-    if self.table == "main" && self.len == 0 {
+    if matches!(self.table, TableID::MAIN) && self.len == 0 {
       if self.code == 0xC9 {
         // RET
         let sp = read_reg16(&Reg::SP);
@@ -1687,7 +1688,7 @@ impl InstTrait for Instruction {
 
   // LDI Instruction
   fn ldi(&self) {
-    if self.table == "misc" {
+    if matches!(self.table, TableID::MISC) {
       if self.code == 0xA0 {
         let de = read_reg16(&Reg::DE);
         let hl = read_reg16(&Reg::HL);
@@ -1718,7 +1719,7 @@ impl InstTrait for Instruction {
 
   // LDIR Instruction
   fn ldir(&self) {
-    if self.table == "misc" {
+    if matches!(self.table, TableID::MISC) {
       if self.code == 0xB0 {
         let de = read_reg16(&Reg::DE);
         let hl = read_reg16(&Reg::HL);
@@ -1758,7 +1759,7 @@ impl InstTrait for Instruction {
 
   // LDD
   fn ldd(&self) {
-    if self.table == "misc" {
+    if matches!(self.table, TableID::MISC) {
       if self.code == 0xA8 {
         let de = read_reg16(&Reg::DE);
         let hl = read_reg16(&Reg::HL);
@@ -1789,7 +1790,7 @@ impl InstTrait for Instruction {
 
   // LDDR Instruction
   fn lddr(&self) {
-    if self.table == "misc" {
+    if matches!(self.table, TableID::MISC) {
       if self.code == 0xB8 {
         let de = read_reg16(&Reg::DE);
         let hl = read_reg16(&Reg::HL);
@@ -1824,7 +1825,7 @@ impl InstTrait for Instruction {
 
   // CPI Instruction
   fn cpi(&self) {
-    if self.table == "misc" {
+    if matches!(self.table, TableID::MISC) {
       if self.code == 0xA1 {
         let a = read_reg8(&Reg::A);
         let hl = read_reg16(&Reg::HL);
@@ -1871,7 +1872,7 @@ impl InstTrait for Instruction {
 
   // CPIR Instruction
   fn cpir(&self) {
-    if self.table == "misc" {
+    if matches!(self.table, TableID::MISC) {
       if self.code == 0xB1 {
         let a = read_reg8(&Reg::A);
         let hl = read_reg16(&Reg::HL);
@@ -1927,7 +1928,7 @@ impl InstTrait for Instruction {
 
   // CPD Instruction
   fn cpd(&self) {
-    if self.table == "misc" {
+    if matches!(self.table, TableID::MISC) {
       if self.code == 0xA9 {
         let a = read_reg8(&Reg::A);
         let hl = read_reg16(&Reg::HL);
@@ -1974,7 +1975,7 @@ impl InstTrait for Instruction {
 
   // CPDR Instruction
   fn cpdr(&self) {
-    if self.table == "misc" {
+    if matches!(self.table, TableID::MISC) {
       if self.code == 0xA9 {
         let a = read_reg8(&Reg::A);
         let hl = read_reg16(&Reg::HL);
