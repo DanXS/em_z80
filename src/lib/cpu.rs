@@ -131,7 +131,7 @@ pub fn update_flags_for_dec(val : u8, dec_val : u8) {
   else {
     clear_flag(Flag::S);
   }
-  clear_flag(Flag::N);
+  set_flag(Flag::N);
 }
 
 #[inline]
@@ -302,6 +302,41 @@ pub fn update_flags_for_subtraction_with_carry16(val1 : u16, val2: u16, res : u3
 }
 
 #[inline]
+pub fn update_flags_for_negation8(val: u8, res: u16) {
+  if res & 0x80 == 0x80  {
+    set_flag(Flag::S);
+  }
+  else {
+    clear_flag(Flag::S)
+  }
+  if res == 0 {
+    set_flag(Flag::Z);
+  }
+  else {
+    clear_flag(Flag::Z);
+  }
+  if val & 0x18 == 0x10 && res & 0x18 == 0x08 {
+    set_flag(Flag::H);
+  }
+  else {
+    clear_flag(Flag::H);
+  }
+  if val != 0x00 {
+    set_flag(Flag::C);
+  }
+  else {
+    clear_flag(Flag::C);
+  }
+  if val == 0x80 {
+    set_flag(Flag::PV);
+  }
+  else {
+    clear_flag(Flag::PV);
+  }
+  set_flag(Flag::N);
+}
+
+#[inline]
 pub fn get_parity(val: u8) -> bool {
   let mut parity = true;
   for i in 0..7 {
@@ -340,6 +375,43 @@ pub fn update_flags_for_logical_op(res: u8, set_h: bool) {
   }
   clear_flag(Flag::C);
   clear_flag(Flag::N);
+}
+
+#[inline]
+pub fn update_flags_for_compare8(val1: u8, val2: u8) {
+  let res = (val1 as i16) - (val2 as i16);
+  if res & 0x80 == 0x80  {
+    set_flag(Flag::S);
+  }
+  else {
+    clear_flag(Flag::S)
+  }
+  if res == 0 {
+    set_flag(Flag::Z);
+  }
+  else {
+    clear_flag(Flag::Z);
+  }
+  if (val1 & 0x80 == 0x80) && (val2 & 0x80 == 0x00) && (res & 0x80 == 0x00) ||
+     (val1 & 0x80 == 0x00) && (val2 & 0x80 == 0x80) && (res & 0x80 == 0x80) {
+    set_flag(Flag::PV);
+  }
+  else {
+    clear_flag(Flag::PV);
+  }
+  if val1 & 0x18 == 0x10 && res & 0x18 == 0x08  {
+    set_flag(Flag::H);
+  }
+  else {
+    clear_flag(Flag::H);
+  }
+  if res & 0x0100 == 0x0100 {
+    set_flag(Flag::C);
+  }
+  else {
+    clear_flag(Flag::C);
+  }
+  set_flag(Flag::N);
 }
 
 struct CpuState {

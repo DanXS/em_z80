@@ -1,4 +1,3 @@
-
 use crate::memory::Memory;
 use crate::registers::Flag;
 use crate::cpu::Cpu;
@@ -1063,6 +1062,24 @@ impl InstTrait for Instruction {
     }
   }
 
+  // NEG Instruction
+  fn neg(&self) {
+    if self.table == "misc" {
+      if self.code == 0x44 {
+        let val = read_reg8("A");
+        let res = -(val as i16);
+        write_reg8("A", res as u8);
+        update_flags_for_negation8(val, res as u16);
+      }
+      else {
+        report_unknown("NEG");
+      }
+    }
+    else {
+      report_unknown("NEG");
+    }
+  }
+
   // AND Instruction
   fn and(&self) {
     if self.table == "main" {
@@ -1306,8 +1323,75 @@ impl InstTrait for Instruction {
     }
   }
 
+  // CP Instruction
   fn cp(&self) {
-    report_unknown("CP");
+    if self.table == "main" {
+      if self.len == 0 {
+        if self.code & 0xF8 == 0xB8 {
+          // CP r
+          let reg_map = ["B", "C", "D", "E", "H", "L", "(HL)", "A"];
+          let r = self.code & 0x07;
+          let src_reg = reg_map[r as usize];
+          let val1 = read_reg8("A");
+          if src_reg == "(HL)" {
+            // CP (HL)
+            let src_addr = read_reg16("HL");
+            let val2 = Memory::read8(src_addr);
+            update_flags_for_compare8(val1, val2);
+          }
+          else {
+            let val2 = read_reg8(src_reg);
+            update_flags_for_compare8(val1, val2);
+          }
+        }
+        else {
+          report_unknown("CP");
+        }
+      }
+      else if self.len == 1 {
+        if self.code == 0xFE {
+          // CP n
+          let val1 = read_reg8("A");
+          let val2 = (self.data & 0xff) as u8;
+          update_flags_for_compare8(val1, val2);
+        }
+        else {
+          report_unknown("CP");
+        }
+      }
+      else {
+        report_unknown("CP");
+      }
+    }
+    else if self.table == "ix" && self.len == 1 {
+      if self.code == 0xBE {
+        // CP IX+d
+        let val1 = read_reg8("A");
+        let addr = read_reg16("IX");
+        let src_addr = calc_address_with_offset(addr, self.data as u8);
+        let val2 = Memory::read8(src_addr);
+        update_flags_for_compare8(val1, val2);
+      }
+      else {
+        report_unknown("CP");
+      }
+    }
+    else if self.table == "iy" && self.len == 1 {
+      if self.code == 0xBE {
+        // CP IY+d
+        let val1 = read_reg8("A");
+        let addr = read_reg16("IY");
+        let src_addr = calc_address_with_offset(addr, self.data as u8);
+        let val2 = Memory::read8(src_addr);
+        update_flags_for_compare8(val1, val2);
+      }
+      else {
+        report_unknown("CP");
+      }
+    }
+    else {
+      report_unknown("CP");
+    }
   }
 
   fn daa(&self) {
@@ -1459,14 +1543,14 @@ impl InstTrait for Instruction {
           Cpu::set_acitve_cycles(self.cycles.0);
         }
       }
-      else if self.code == 0x20 {
+      else if self.code == 0x30 {
         // JR NC
         if !is_flag_set(Flag::C) {
           write_reg16("PC", dst_addr);
           Cpu::set_acitve_cycles(self.cycles.0);
         }
       }
-      else if self.code == 0x28 {
+      else if self.code == 0x38 {
         // JR C
         if is_flag_set(Flag::C) {
           write_reg16("PC", dst_addr);
@@ -1581,12 +1665,150 @@ impl InstTrait for Instruction {
     report_unknown("RST");
   }
 
-  fn ldir(&self) {
-    report_unknown("IDIR");
+  // LDI Instruction
+  fn ldi(&self) {
+    if self.table == "misc" {
+      if self.code == 0xA0 {
+        let de = read_reg16("DE");
+        let hl = read_reg16("HL");
+        let mut bc = read_reg16("BC");
+        let val = Memory::read8(hl);
+        Memory::write8(de, val);
+        write_reg16("DE", inc_u16_wrap(de));
+        write_reg16("HL", inc_u16_wrap(hl));
+        bc = dec_u16_wrap(bc);
+        write_reg16("BC", bc);
+        clear_flag(Flag::H);
+        clear_flag(Flag::N);
+        if dec_u16_wrap(bc) != 0x0000 {
+          set_flag(Flag::PV);
+        }
+        else {
+          clear_flag(Flag::PV);
+        }
+      }
+      else {
+        report_unknown("LDI");
+      }
+    }
+    else {
+      report_unknown("LDI");
+    }
   }
 
+  // LDIR Instruction
+  fn ldir(&self) {
+    if self.table == "misc" {
+      if self.code == 0xB0 {
+        let de = read_reg16("DE");
+        let hl = read_reg16("HL");
+        let mut bc = read_reg16("BC");
+        let val = Memory::read8(hl);
+        Memory::write8(de, val);
+        write_reg16("DE", inc_u16_wrap(de));
+        write_reg16("HL", inc_u16_wrap(hl));
+        bc = dec_u16_wrap(bc);
+        write_reg16("BC", bc);
+        if bc != 0x00 {
+          let mut pc = read_reg16("PC");
+          pc = calc_address_with_offset(pc, 0xfe);
+          write_reg16("PC", pc);
+          Cpu::set_acitve_cycles(self.cycles.0);
+        }
+        else {
+          Cpu::set_acitve_cycles(self.cycles.1);
+        }
+        clear_flag(Flag::H);
+        clear_flag(Flag::N);
+        if dec_u16_wrap(bc) != 0x0000 {
+          set_flag(Flag::PV);
+        }
+        else {
+          clear_flag(Flag::PV);
+        }
+      }
+      else {
+        report_unknown("LDIR");
+      }
+    }
+    else {
+      report_unknown("LDIR");
+    }
+  }
+
+  // LDD
+  fn ldd(&self) {
+    if self.table == "misc" {
+      if self.code == 0xA8 {
+        let de = read_reg16("DE");
+        let hl = read_reg16("HL");
+        let mut bc = read_reg16("BC");
+        let val = Memory::read8(hl);
+        Memory::write8(de, val);
+        write_reg16("DE", dec_u16_wrap(de));
+        write_reg16("HL", dec_u16_wrap(hl));
+        bc = dec_u16_wrap(bc);
+        write_reg16("BC", bc);
+        clear_flag(Flag::H);
+        clear_flag(Flag::N);
+        if dec_u16_wrap(bc) != 0x0000 {
+          set_flag(Flag::PV);
+        }
+        else {
+          clear_flag(Flag::PV);
+        }
+      }
+      else {
+        report_unknown("LDD");
+      }
+    }
+    else {
+      report_unknown("LDD");
+    }
+  }
+
+  // LDDR Instruction
   fn lddr(&self) {
-    report_unknown("IDDR");
+    if self.table == "misc" {
+      if self.code == 0xB8 {
+        let de = read_reg16("DE");
+        let hl = read_reg16("HL");
+        let mut bc = read_reg16("BC");
+        let val = Memory::read8(hl);
+        Memory::write8(de, val);
+        write_reg16("DE", dec_u16_wrap(de));
+        write_reg16("HL", dec_u16_wrap(hl));
+        bc = dec_u16_wrap(bc);
+        write_reg16("BC", bc);
+        if bc != 0x00 {
+          let mut pc = read_reg16("PC");
+          pc = calc_address_with_offset(pc, 0xfe);
+          write_reg16("PC", pc);
+          Cpu::set_acitve_cycles(self.cycles.0);
+        }
+        else {
+          Cpu::set_acitve_cycles(self.cycles.1);
+        }
+        clear_flag(Flag::H);
+        clear_flag(Flag::N);
+        clear_flag(Flag::PV);
+      }
+      else {
+        report_unknown("LDDR");
+      }
+    }
+    else {
+      report_unknown("LDDR");
+    }
+  }
+
+
+  fn cpi(&self) {
+    report_unknown("CPI");
+  }
+
+  fn cpd(&self) {
+    report_unknown("CPD");
   }
 
   fn cpir(&self) {
@@ -1637,10 +1859,6 @@ impl InstTrait for Instruction {
     report_unknown("EI");
   }
 
-  fn neg(&self) {
-    report_unknown("NEG");
-  }
-
   fn mlt(&self) {
     report_unknown("MLT");
   }
@@ -1651,10 +1869,6 @@ impl InstTrait for Instruction {
 
   fn rld(&self) {
     report_unknown("RLD");
-  }
-
-  fn ldd(&self) {
-    report_unknown("LDD");
   }
 
   fn outi(&self) {
@@ -1673,17 +1887,7 @@ impl InstTrait for Instruction {
     report_unknown("HALT");
   }
 
-  fn ldi(&self) {
-    report_unknown("LDI");
-  }
 
-  fn cpi(&self) {
-    report_unknown("CPI");
-  }
-
-  fn cpd(&self) {
-    report_unknown("CPD");
-  }
 
   // The following are unsupported on the z80, but are legal for the z180 should we wish
   // to implement them later, keeping stubs to warn user if encountered
