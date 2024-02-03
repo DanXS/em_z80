@@ -1613,8 +1613,30 @@ impl InstTrait for Instruction {
     }
   }
 
+  // DJNZ Instruction
   fn djnz(&self) {
-    report_unknown("DJNZ");
+    if self.table == "main" && self.len == 1 {
+      if self.code == 0x10 {
+        let mut b = read_reg8("B");
+        b = dec_u8_wrap(b);
+        write_reg8("B", b);
+        if b != 0 {
+          let mut pc = read_reg16("PC");
+          pc = calc_address_with_offset(pc, self.data as u8);
+          write_reg16("PC", pc);
+          Cpu::set_acitve_cycles(self.cycles.0);
+        }
+        else {
+          Cpu::set_acitve_cycles(self.cycles.1);
+        }
+      }
+      else {
+        report_unknown("DJNZ");
+      }
+    }
+    else {
+      report_unknown("DJNZ");
+    }
   }
 
   // RET Instruciton
