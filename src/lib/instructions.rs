@@ -1802,21 +1802,210 @@ impl InstTrait for Instruction {
     }
   }
 
-
+  // CPI Instruction
   fn cpi(&self) {
-    report_unknown("CPI");
+    if self.table == "misc" {
+      if self.code == 0xA1 {
+        let a = read_reg8("A");
+        let hl = read_reg16("HL");
+        let mut bc = read_reg16("BC");
+        let val = Memory::read8(hl);
+        write_reg16("HL", inc_u16_wrap(hl));
+        bc = dec_u16_wrap(bc);
+        write_reg16("BC", bc);
+        let res = ((a as i16) - (val as i16)) as u16;
+        if res & 0x80 == 0x80 {
+          set_flag(Flag::S);
+        }
+        else {
+          clear_flag(Flag::S);
+        }
+        if res == 0x00 {
+          set_flag(Flag::Z);
+        }
+        else {
+          clear_flag(Flag::Z);
+        }
+        if a & 0x18 == 0x10 && res & 0x18 == 0x08 {
+          set_flag(Flag::H);
+        }
+        else {
+          clear_flag(Flag::H);
+        }
+        if dec_u16_wrap(bc) != 0x0000 {
+          set_flag(Flag::PV);
+        }
+        else {
+          clear_flag(Flag::PV);
+        }
+        set_flag(Flag::N);
+      }
+      else {
+        report_unknown("CPI");
+      }
+    }
+    else {
+      report_unknown("CPI");
+    }
   }
 
-  fn cpd(&self) {
-    report_unknown("CPD");
-  }
-
+  // CPIR Instruction
   fn cpir(&self) {
-    report_unknown("CPIR");
+    if self.table == "misc" {
+      if self.code == 0xB1 {
+        let a = read_reg8("A");
+        let hl = read_reg16("HL");
+        let mut bc = read_reg16("BC");
+        let val = Memory::read8(hl);
+        write_reg16("HL", inc_u16_wrap(hl));
+        bc = dec_u16_wrap(bc);
+        write_reg16("BC", bc);
+        let res = ((a as i16) - (val as i16)) as u16;
+        if bc != 0x00 && res != 0x0000 {
+          let mut pc = read_reg16("PC");
+          pc = calc_address_with_offset(pc, 0xfe);
+          write_reg16("PC", pc);
+          Cpu::set_acitve_cycles(self.cycles.0);
+        }
+        else {
+          Cpu::set_acitve_cycles(self.cycles.1);
+        }
+        if res & 0x80 == 0x80 {
+          set_flag(Flag::S);
+        }
+        else {
+          clear_flag(Flag::S);
+        }
+        if res == 0x00 {
+          set_flag(Flag::Z);
+        }
+        else {
+          clear_flag(Flag::Z);
+        }
+        if a & 0x18 == 0x10 && res & 0x18 == 0x08 {
+          set_flag(Flag::H);
+        }
+        else {
+          clear_flag(Flag::H);
+        }
+        if dec_u16_wrap(bc) != 0x0000 {
+          set_flag(Flag::PV);
+        }
+        else {
+          clear_flag(Flag::PV);
+        }
+        set_flag(Flag::N);
+      }
+      else {
+        report_unknown("CPI");
+      }
+    }
+    else {
+      report_unknown("CPI");
+    }
   }
 
+  // CPD Instruction
+  fn cpd(&self) {
+    if self.table == "misc" {
+      if self.code == 0xA9 {
+        let a = read_reg8("A");
+        let hl = read_reg16("HL");
+        let mut bc = read_reg16("BC");
+        let val = Memory::read8(hl);
+        write_reg16("HL", dec_u16_wrap(hl));
+        bc = dec_u16_wrap(bc);
+        write_reg16("BC", bc);
+        let res = ((a as i16) - (val as i16)) as u16;
+        if res & 0x80 == 0x80 {
+          set_flag(Flag::S);
+        }
+        else {
+          clear_flag(Flag::S);
+        }
+        if res == 0x00 {
+          set_flag(Flag::Z);
+        }
+        else {
+          clear_flag(Flag::Z);
+        }
+        if a & 0x18 == 0x10 && res & 0x18 == 0x08 {
+          set_flag(Flag::H);
+        }
+        else {
+          clear_flag(Flag::H);
+        }
+        if dec_u16_wrap(bc) != 0x0000 {
+          set_flag(Flag::PV);
+        }
+        else {
+          clear_flag(Flag::PV);
+        }
+        set_flag(Flag::N);
+      }
+      else {
+        report_unknown("CPD");
+      }
+    }
+    else {
+      report_unknown("CPD");
+    }
+  }
+
+  // CPDR Instruction
   fn cpdr(&self) {
-    report_unknown("CPDR");
+    if self.table == "misc" {
+      if self.code == 0xA9 {
+        let a = read_reg8("A");
+        let hl = read_reg16("HL");
+        let mut bc = read_reg16("BC");
+        let val = Memory::read8(hl);
+        write_reg16("HL", dec_u16_wrap(hl));
+        bc = dec_u16_wrap(bc);
+        write_reg16("BC", bc);
+        let res = ((a as i16) - (val as i16)) as u16;
+        if bc != 0x00 && res != 0x0000 {
+          let mut pc = read_reg16("PC");
+          pc = calc_address_with_offset(pc, 0xfe);
+          write_reg16("PC", pc);
+          Cpu::set_acitve_cycles(self.cycles.0);
+        }
+        else {
+          Cpu::set_acitve_cycles(self.cycles.1);
+        }
+        if res & 0x80 == 0x80 {
+          set_flag(Flag::S);
+        }
+        else {
+          clear_flag(Flag::S);
+        }
+        if res == 0x00 {
+          set_flag(Flag::Z);
+        }
+        else {
+          clear_flag(Flag::Z);
+        }
+        if a & 0x18 == 0x10 && res & 0x18 == 0x08 {
+          set_flag(Flag::H);
+        }
+        else {
+          clear_flag(Flag::H);
+        }
+        if dec_u16_wrap(bc) != 0x0000 {
+          set_flag(Flag::PV);
+        }
+        else {
+          clear_flag(Flag::PV);
+        }
+        set_flag(Flag::N);
+      }
+      else {
+        report_unknown("CPDR");
+      }
+    }
+    else {
+      report_unknown("CPDR");
+    }
   }
 
   fn otir(&self) {
