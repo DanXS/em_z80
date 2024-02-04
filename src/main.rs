@@ -1,8 +1,9 @@
 
 extern crate em_z80_lib;
+extern crate spectrum_lib;
 
 use em_z80_lib::*;
-
+use spectrum_lib::*;
 use std::env;
 use std::u16;
 use std::rc::Rc;
@@ -11,6 +12,7 @@ use slint::{ SharedString, ModelRc, VecModel };
 slint::include_modules!();
 
 fn main() {
+    hello_ula();
     let rom_file_result = load_rom("./roms/spectrum48k.rom");
     match rom_file_result {
         Ok(file) => file,
