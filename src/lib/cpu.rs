@@ -11,7 +11,7 @@ use crate::opcodes::Opcode;
 use crate::memory::Memory;
 use crate::registers::Register;
 use crate::registers::Flag;
-use crate::registers::Reg;
+use crate::registers::RegID;
 
 pub static mut REG : Mutex<Register> = Mutex::new(Register {
   af: 0x0000,
@@ -31,28 +31,28 @@ pub static mut REG : Mutex<Register> = Mutex::new(Register {
 });
 
 #[inline]
-pub fn read_reg8(reg: &Reg) -> u8 {
+pub fn read_reg8(reg: RegID) -> u8 {
   unsafe {
     REG.lock().unwrap().read8(reg)
   }
 }
 
 #[inline]
-pub fn read_reg16(reg: &Reg) -> u16 {
+pub fn read_reg16(reg: RegID) -> u16 {
   unsafe {
     REG.lock().unwrap().read16(reg)
   }
 }
 
 #[inline]
-pub fn write_reg8(reg: &Reg, val: u8) {
+pub fn write_reg8(reg: RegID, val: u8) {
   unsafe {
     REG.lock().unwrap().write8(reg, val);
   }
 }
 
 #[inline]
-pub fn write_reg16(reg: &Reg, val: u16) {
+pub fn write_reg16(reg: RegID, val: u16) {
   unsafe {
     REG.lock().unwrap().write16(reg, val);
   }
@@ -438,27 +438,27 @@ pub struct Cpu;
 impl Cpu {
 
   pub fn get_pc() -> u16 {
-    read_reg16(&Reg::PC)
+    read_reg16(RegID::PC)
   }
 
   pub fn set_pc(addr: u16) {
-    write_reg16(&Reg::PC, addr);
+    write_reg16(RegID::PC, addr);
   }
 
-  pub fn get_register8(reg: Reg) -> u8 {
-    read_reg8(&reg)
+  pub fn get_register8(reg: RegID) -> u8 {
+    read_reg8(reg)
   }
 
-  pub fn set_register8(reg: Reg, val: u8) {
-    write_reg8(&reg, val);
+  pub fn set_register8(reg: RegID, val: u8) {
+    write_reg8(reg, val);
   }
 
-  pub fn get_register16(reg: Reg) -> u16 {
-    read_reg16(&reg)
+  pub fn get_register16(reg: RegID) -> u16 {
+    read_reg16(reg)
   }
 
-  pub fn set_register16(reg: Reg, val: u16) {
-    write_reg16(&reg, val);
+  pub fn set_register16(reg: RegID, val: u16) {
+    write_reg16(reg, val);
   }
 
   pub fn set_status_flag(flag: Flag) {
@@ -473,7 +473,7 @@ impl Cpu {
     is_flag_set(flag)
   }
 
-  pub fn get_register_from_str(reg_str: &str) -> Reg {
+  pub fn get_register_from_str(reg_str: &str) -> RegID {
     Register::from_str(reg_str)
   }
 
@@ -682,7 +682,7 @@ impl Cpu {
       Self::step();
       if unsafe { CPU_STATE.lock().unwrap().breakpoints_enabled } {
         if unsafe { CPU_STATE.lock().unwrap().breakpoints.contains(&Self::get_pc()) } {
-          println!("Hit breakpoint at {:40X?}", &Self::get_pc());
+          println!("Hit breakpoint at: {:04X?}", &Self::get_pc());
           break;
         }
       }
