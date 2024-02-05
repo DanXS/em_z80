@@ -1,5 +1,6 @@
 use core::panic;
 use std::fmt;
+use crate::util::*;
 
 pub enum Flag {
   C,    // Carry Flag
@@ -290,5 +291,348 @@ impl Register {
       ConditionCode::M  => bit_mask_for_flag(Flag::S) & flags != 0
     }
   }
+  
+  pub fn update_flags_for_inc(&mut self, val : u8, inc_val : u8) {
+    if val == 0x7F {
+      self.set_flag(Flag::PV);
+    }
+    else {
+      self.clear_flag(Flag::PV);
+    }
+    if inc_val == 0x00 {
+      self.set_flag(Flag::Z);
+    }
+    else {
+      self.clear_flag(Flag::Z);
+    }
+    if val & 0x0F == 0x0F {
+      self.set_flag(Flag::H);
+    }
+    else {
+      self.clear_flag(Flag::H);
+    }
+    if inc_val & 0x80 == 0x80  {
+      self.set_flag(Flag::S);
+    }
+    else {
+      self.clear_flag(Flag::S);
+    }
+    self.clear_flag(Flag::N);
+  }
+
+  pub fn update_flags_for_dec(&mut self, val : u8, dec_val : u8) {
+    if val == 0x80 {
+      self.set_flag(Flag::PV);
+    }
+    else {
+      self.clear_flag(Flag::PV);
+    }
+    if dec_val == 0x00 {
+      self.set_flag(Flag::Z);
+    }
+    else {
+      self.clear_flag(Flag::Z);
+    }
+    if val & 0x1F == 0x10 {
+      self.set_flag(Flag::H);
+    }
+    else {
+      self.clear_flag(Flag::H);
+    }
+    if dec_val & 0x80 == 0x80  {
+      self.set_flag(Flag::S);
+    }
+    else {
+      self.clear_flag(Flag::S);
+    }
+    self.set_flag(Flag::N);
+  }
+
+  pub fn update_flags_for_addition8(&mut self, val1 : u8, val2: u8, res: u16) {
+    if res & 0x80 == 0x80  {
+      self.set_flag(Flag::S);
+    }
+    else {
+      self.clear_flag(Flag::S)
+    }
+    if res == 0 {
+      self.set_flag(Flag::Z);
+    }
+    else {
+      self.clear_flag(Flag::Z);
+    }
+    if ((val1 & 0x0F) + (val2 & 0x0F)) & 0x10 == 0x10 {
+      self.set_flag(Flag::H);
+    }
+    else {
+      self.clear_flag(Flag::H);
+    }
+    if res & 0x100 == 0x100 {
+      self.set_flag(Flag::C);
+    }
+    else {
+      self.clear_flag(Flag::C);
+    }
+    if (val1 & 0x80 == 0x80) && (val2 & 0x80 == 0x80) && (res & 0x80 == 0x00) ||
+       (val1 & 0x80 == 0x00) && (val2 & 0x80 == 0x00) && (res & 0x80 == 0x80) {
+        self.set_flag(Flag::PV);
+    }
+    else {
+      self.clear_flag(Flag::PV);
+    }
+    self.clear_flag(Flag::N);
+  }
+
+  pub fn update_flags_for_subtraction8(&mut self, val1 : u8, val2: u8, res: u16) {
+    if res & 0x80 == 0x80  {
+      self.set_flag(Flag::S);
+    }
+    else {
+      self.clear_flag(Flag::S)
+    }
+    if res == 0 {
+      self.set_flag(Flag::Z);
+    }
+    else {
+      self.clear_flag(Flag::Z);
+    }
+    if (val1 & 0x18) == 0x10 && (res as u8 & 0x18) == 0x08 {
+      self.set_flag(Flag::H);
+    }
+    else {
+      self.clear_flag(Flag::H);
+    }
+    if res & 0x100 == 0x100 {
+      self.set_flag(Flag::C);
+    }
+    else {
+      self.clear_flag(Flag::C);
+    }
+    if (val1 & 0x80 == 0x80) && (val2 & 0x80 == 0x00) && (res & 0x80 == 0x00) ||
+       (val1 & 0x80 == 0x00) && (val2 & 0x80 == 0x80) && (res & 0x80 == 0x80) {
+        self.set_flag(Flag::PV);
+    }
+    else {
+      self.clear_flag(Flag::PV);
+    }
+    self.set_flag(Flag::N);
+  }
+
+  pub fn update_flags_for_addition16(&mut self, val1: u16, res: u32) {
+    if res & 0x10000 == 0x10000 {
+      self.set_flag(Flag::C);
+    }
+    else {
+      self.clear_flag(Flag::C);
+    }
+    if res == 0 {
+      self.set_flag(Flag::Z);
+    }
+    else {
+      self.clear_flag(Flag::Z);
+    }
+    if (val1 & 0x0C00 == 0x0400) && (res & 0x0800 == 0x800) {
+      self.set_flag(Flag::H);
+    }
+    else {
+      self.clear_flag(Flag::H);
+    }
+    self.clear_flag(Flag::N);
+  }
+
+  pub fn update_flags_for_addition_with_carry16(&mut self, val1: u16, val2: u16, res: u32) {
+    if res & 0x8000 == 0x8000 {
+      self.set_flag(Flag::S);
+    }
+    else {
+      self.clear_flag(Flag::S);
+    }
+    if res == 0 {
+      self.set_flag(Flag::Z);
+    }
+    else {
+      self.clear_flag(Flag::Z);
+    }
+    if res & 0x10000 == 0x10000 {
+      self.set_flag(Flag::C);
+    }
+    else {
+      self.clear_flag(Flag::C);
+    }
+    if (val1 & 0x0C00 == 0x0800) && (res & 0x0400 == 0x0400) {
+      self.set_flag(Flag::H);
+    }
+    else {
+      self.clear_flag(Flag::H);
+    }
+    if (val1 & 0x8000 == 0x8000) && (val2 & 0x8000 == 0x8000) && (res & 0x8000 == 0x0000) ||
+       (val1 & 0x8000 == 0x0000) && (val2 & 0x8000 == 0x0000) && (res & 0x8000 == 0x8000) {
+        self.set_flag(Flag::PV);
+    }
+    else {
+      self.clear_flag(Flag::PV);
+    }
+    self.clear_flag(Flag::N);
+  }
+
+  pub fn update_flags_for_subtraction_with_carry16(&mut self, val1 : u16, val2: u16, res : u32) {
+    if res & 0x8000 == 0x8000 {
+      self.set_flag(Flag::S);
+    }
+    else {
+      self.clear_flag(Flag::S);
+    }
+    if res == 0 {
+      self.set_flag(Flag::Z);
+    }
+    else {
+      self.clear_flag(Flag::Z);
+    }
+    if res & 0x10000 == 0x10000 {
+      self.set_flag(Flag::C);
+    }
+    else {
+      self.clear_flag(Flag::C);
+    }
+    if (val1 & 0x0C00 == 0x0800) && (res & 0x0400 == 0x0400) {
+      self.set_flag(Flag::H);
+    }
+    else {
+      self.clear_flag(Flag::H);
+    }
+    if (val1 & 0x8000 == 0x8000) && (val2 & 0x8000 == 0x0000) && (res & 0x8000 == 0x0000) ||
+       (val1 & 0x8000 == 0x0000) && (val2 & 0x8000 == 0x8000) && (res & 0x8000 == 0x8000) {
+      self.set_flag(Flag::PV);
+    }
+    else {
+      self.clear_flag(Flag::PV);
+    }
+    self.set_flag(Flag::N);
+  }
+
+  pub fn update_flags_for_negation8(&mut self, val: u8, res: u16) {
+    if res & 0x80 == 0x80  {
+      self.set_flag(Flag::S);
+    }
+    else {
+      self.clear_flag(Flag::S)
+    }
+    if res == 0 {
+      self.set_flag(Flag::Z);
+    }
+    else {
+      self.clear_flag(Flag::Z);
+    }
+    if (val & 0x18 == 0x10) && (res & 0x18 == 0x08) ||
+       (val & 0x18 == 0x08) && (res & 0x18 == 0x10) {
+        self.set_flag(Flag::H);
+    }
+    else {
+      self.clear_flag(Flag::H);
+    }
+    if val != 0x00 {
+      self.set_flag(Flag::C);
+    }
+    else {
+      self.clear_flag(Flag::C);
+    }
+    if val == 0x80 {
+      self.set_flag(Flag::PV);
+    }
+    else {
+      self.clear_flag(Flag::PV);
+    }
+    self.set_flag(Flag::N);
+  }
+  
+  pub fn update_flags_for_logical_op(&mut self, res: u8, set_h: bool) {
+    if res & 0x80 == 0x80  {
+      self.set_flag(Flag::S);
+    }
+    else {
+      self.clear_flag(Flag::S)
+    }
+    if res == 0 {
+      self.set_flag(Flag::Z);
+    }
+    else {
+      self.clear_flag(Flag::Z);
+    }
+    if get_parity(res) {
+      self.set_flag(Flag::PV);
+    }
+    else {
+      self.clear_flag(Flag::PV);
+    }
+    if set_h {
+      self.set_flag(Flag::H);
+    }
+    else {
+      self.clear_flag(Flag::H);
+    }
+    self.clear_flag(Flag::C);
+    self.clear_flag(Flag::N);
+  }
+  
+  pub fn update_flags_for_compare8(&mut self, val1: u8, val2: u8) {
+    let res = (val1 as i16) - (val2 as i16);
+    if res & 0x80 == 0x80  {
+      self.set_flag(Flag::S);
+    }
+    else {
+      self.clear_flag(Flag::S)
+    }
+    if res == 0 {
+      self.set_flag(Flag::Z);
+    }
+    else {
+      self.clear_flag(Flag::Z);
+    }
+    if (val1 & 0x80 == 0x80) && (val2 & 0x80 == 0x00) && (res & 0x80 == 0x00) ||
+       (val1 & 0x80 == 0x00) && (val2 & 0x80 == 0x80) && (res & 0x80 == 0x80) {
+      self.set_flag(Flag::PV);
+    }
+    else {
+      self.clear_flag(Flag::PV);
+    }
+    if val1 & 0x18 == 0x10 && res & 0x18 == 0x08  {
+      self.set_flag(Flag::H);
+    }
+    else {
+      self.clear_flag(Flag::H);
+    }
+    if res & 0x0100 == 0x0100 {
+      self.set_flag(Flag::C);
+    }
+    else {
+      self.clear_flag(Flag::C);
+    }
+    self.set_flag(Flag::N);
+  }
+  
+  pub fn update_flags_shift_left(&mut self, val: u8, res: u8) {
+    self.clear_flag(Flag::S);
+    if res == 0 {
+      self.clear_flag(Flag::Z);
+    }
+    else {
+      self.set_flag(Flag::Z);
+    }
+    self.clear_flag(Flag::H);
+    if get_parity(res) {
+      self.set_flag(Flag::PV);
+    }
+    else {
+      self.clear_flag(Flag::PV);
+    }
+    self.clear_flag(Flag::N);
+    if val & 0x01 == 0x01 {
+      self.set_flag(Flag::C);
+    }
+    else {
+      self.clear_flag(Flag::C);
+    }
+  }
+
 }
 

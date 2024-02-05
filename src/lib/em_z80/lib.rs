@@ -23,9 +23,9 @@ pub fn get_rom_size() -> u32 {
   memory::ROM_SIZE
 }
 
-// Load a rom image file into the rom area of memory
-pub fn load_rom(filename: &str) -> io::Result<()> {
-  Memory::load_rom(filename)
+// Load a binary image file into memory starting at a given start address
+pub fn load_bin(filename: &str, start_addr: usize) -> io::Result<()> {
+  Memory::load_bin(filename, start_addr)
 }
 
 // Get a reference to the memory
@@ -161,4 +161,14 @@ pub fn has_breakpoint(addr: u16) -> bool {
 // Enable or disable breakpoints
 pub fn update_breakpoints_enabled(enabled: bool) {
   Cpu::update_breakpoints_enabled(enabled);
+}
+
+// Trigger an interrupt with a given value on the databus
+// Note: This would normally be done by an external peripheral
+pub fn trigger_interrupt(db_val : u8) {
+  Cpu::trigger_interrupt(db_val);
+}
+
+pub fn read_memory_slice(start_addr: usize, end_addr: usize, buffer: &mut Vec<u8>) {
+  Memory::read_slice(start_addr, end_addr, buffer);
 }

@@ -781,7 +781,7 @@ impl InstTrait for Instruction {
           if self.code == 0xC6 {
             // ADD A,n
             let val1 = read_reg8(RegID::A);
-            let val2 = ((self.data >> 8) & 0xFF) as u8;
+            let val2 = (self.data & 0xFF) as u8;
             let res = (val1 as u16) + (val2 as u16);
             write_reg8(RegID::A, (res & 0xFF) as u8);
             update_flags_for_addition8(val1, val2, res);
@@ -884,7 +884,7 @@ impl InstTrait for Instruction {
           if self.code == 0xCE {
             // ADC A,n
             let val1 = read_reg8(RegID::A);
-            let val2 = ((self.data >> 8) & 0xFF) as u8;
+            let val2 = (self.data & 0xFF) as u8;
             let res = (val1 as u16) + (val2 as u16) + (carry as u16);
             write_reg8(RegID::A, (res & 0xFF) as u8);
             update_flags_for_addition8(val1, u8_plus_carry_wrap(val2, carry), res);
@@ -979,7 +979,7 @@ impl InstTrait for Instruction {
           if self.code == 0xD6 {
             // SUB A,n
             let val1 = read_reg8(RegID::A);
-            let val2 = ((self.data >> 8) & 0xFF) as u8;
+            let val2 = (self.data & 0xFF) as u8;
             let res = (val1 as i16) - (val2 as i16);
             write_reg8(RegID::A, (res & 0xFF) as u8);
             update_flags_for_subtraction8(val1, val2, res as u16);
@@ -1062,7 +1062,7 @@ impl InstTrait for Instruction {
           if self.code == 0xDE {
             // SBC A,n
             let val1 = read_reg8(RegID::A);
-            let val2 = ((self.data >> 8) & 0xFF) as u8;
+            let val2 = (self.data & 0xFF) as u8;
             let res = (val1 as i16) - (val2 as i16) - (carry as i16);
             write_reg8(RegID::A, (res & 0xFF) as u8);
             update_flags_for_subtraction8(val1, u8_plus_carry_wrap(val2, carry), res as u16);
@@ -1477,8 +1477,53 @@ impl InstTrait for Instruction {
    report_unknown("SLL");
   }
 
+  // SRL Instruction
   fn srl(&self) {
-   report_unknown("SRL");
+    match self.table {
+      TableID::BIT => {
+        // SRL r
+        if self.len==0 && self.code & 0xF8 == 0x38 {
+          let reg_map = [RegID::B, RegID::C, RegID::D, RegID::E, RegID::H, RegID::L, RegID::HL, RegID::A];
+          let r = self.code & 0x07;
+          let reg = reg_map[r as usize];
+          if matches!(reg, RegID::HL) {
+            // SRL (HL)
+            let addr = read_reg16(RegID::HL);
+            let val = Memory::read8(addr);
+            let res = val >> 1;
+            Memory::write8(addr, res);
+            write_reg8(RegID::A, res);
+            update_flags_shift_left(val, res);
+          }
+          else {
+            let val = read_reg8(reg);
+            let res = val >> 1;
+            write_reg8(reg, res);
+            update_flags_shift_left(val, res);
+          }
+        }
+        else {
+          report_unknown("SRL");
+        }
+      },
+      TableID::IXBIT => {
+        if self.len==1 && self.code & 0xF8 == 0xC8 {
+
+        }
+        else {
+          report_unknown("SRL");
+        }
+      },
+      TableID::IYBIT => {
+        if self.len==1 && self.code & 0xF8 == 0xC8 {
+
+        }
+        else {
+          report_unknown("SRL");
+        }
+      },
+      _ => report_unknown("SRL")
+    }
   }
 
   fn bit(&self) {

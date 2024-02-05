@@ -81,340 +81,86 @@ pub fn is_flag_set(flag: Flag) -> bool {
 
 #[inline]
 pub fn update_flags_for_inc(val : u8, inc_val : u8) {
-  if val == 0x7F {
-    set_flag(Flag::PV);
+  unsafe {
+    REG.lock().unwrap().update_flags_for_inc(val, inc_val);
   }
-  else {
-    clear_flag(Flag::PV);
-  }
-  if inc_val == 0x00 {
-    set_flag(Flag::Z);
-  }
-  else {
-    clear_flag(Flag::Z);
-  }
-  if val & 0x0F == 0x0F {
-    set_flag(Flag::H);
-  }
-  else {
-    clear_flag(Flag::H);
-  }
-  if inc_val & 0x80 == 0x80  {
-    set_flag(Flag::S);
-  }
-  else {
-    clear_flag(Flag::S);
-  }
-  clear_flag(Flag::N);
 }
 
 #[inline]
 pub fn update_flags_for_dec(val : u8, dec_val : u8) {
-  if val == 0x80 {
-    set_flag(Flag::PV);
+  unsafe {
+    REG.lock().unwrap().update_flags_for_dec(val, dec_val);
   }
-  else {
-    clear_flag(Flag::PV);
-  }
-  if dec_val == 0x00 {
-    set_flag(Flag::Z);
-  }
-  else {
-    clear_flag(Flag::Z);
-  }
-  if val & 0x1F == 0x10 {
-    set_flag(Flag::H);
-  }
-  else {
-    clear_flag(Flag::H);
-  }
-  if dec_val & 0x80 == 0x80  {
-    set_flag(Flag::S);
-  }
-  else {
-    clear_flag(Flag::S);
-  }
-  set_flag(Flag::N);
 }
 
 #[inline]
 pub fn update_flags_for_addition8(val1 : u8, val2: u8, res: u16) {
-  if res & 0x80 == 0x80  {
-    set_flag(Flag::S);
+  unsafe {
+    REG.lock().unwrap().update_flags_for_addition8(val1, val2, res);
   }
-  else {
-    clear_flag(Flag::S)
-  }
-  if res == 0 {
-    set_flag(Flag::Z);
-  }
-  else {
-    clear_flag(Flag::Z);
-  }
-  if ((val1 & 0x0F) + (val2 & 0x0F)) & 0x10 == 0x10 {
-    set_flag(Flag::H);
-  }
-  else {
-    clear_flag(Flag::H);
-  }
-  if res & 0x100 == 0x100 {
-    set_flag(Flag::C);
-  }
-  else {
-    clear_flag(Flag::C);
-  }
-  if (val1 & 0x80 == 0x80) && (val2 & 0x80 == 0x80) && (res & 0x80 == 0x00) ||
-     (val1 & 0x80 == 0x00) && (val2 & 0x80 == 0x00) && (res & 0x80 == 0x80) {
-    set_flag(Flag::PV);
-  }
-  else {
-    clear_flag(Flag::PV);
-  }
-  clear_flag(Flag::N);
 }
 
 #[inline]
 pub fn update_flags_for_subtraction8(val1 : u8, val2: u8, res: u16) {
-  if res & 0x80 == 0x80  {
-    set_flag(Flag::S);
+  unsafe {
+    REG.lock().unwrap().update_flags_for_subtraction8(val1, val2, res);
   }
-  else {
-    clear_flag(Flag::S)
-  }
-  if res == 0 {
-    set_flag(Flag::Z);
-  }
-  else {
-    clear_flag(Flag::Z);
-  }
-  if ((val1 & 0x1F) - (val2 & 0x1F)) & 0x80 == 0x80 {
-    set_flag(Flag::H);
-  }
-  else {
-    clear_flag(Flag::H);
-  }
-  if res & 0x100 == 0x100 {
-    set_flag(Flag::C);
-  }
-  else {
-    clear_flag(Flag::C);
-  }
-  if (val1 & 0x80 == 0x80) && (val2 & 0x80 == 0x00) && (res & 0x80 == 0x00) ||
-     (val1 & 0x80 == 0x00) && (val2 & 0x80 == 0x80) && (res & 0x80 == 0x80) {
-    set_flag(Flag::PV);
-  }
-  else {
-    clear_flag(Flag::PV);
-  }
-  set_flag(Flag::N);
 }
 
 #[inline]
 pub fn update_flags_for_addition16(val1: u16, res: u32) {
-  if res & 0x10000 == 0x10000 {
-    set_flag(Flag::C);
+  unsafe {
+    REG.lock().unwrap().update_flags_for_addition16(val1, res);
   }
-  else {
-    clear_flag(Flag::C);
-  }
-  if res == 0 {
-    set_flag(Flag::Z);
-  }
-  else {
-    clear_flag(Flag::Z);
-  }
-  if (val1 & 0x0C00 == 0x0400) && (res & 0x0800 == 0x800) {
-    set_flag(Flag::H);
-  }
-  else {
-    clear_flag(Flag::H);
-  }
-  clear_flag(Flag::N);
 }
 
 #[inline]
 pub fn update_flags_for_addition_with_carry16(val1: u16, val2: u16, res: u32) {
-  if res & 0x8000 == 0x8000 {
-    set_flag(Flag::S);
+  unsafe {
+    REG.lock().unwrap().update_flags_for_addition_with_carry16(val1, val2, res);
   }
-  else {
-    clear_flag(Flag::S);
-  }
-  if res == 0 {
-    set_flag(Flag::Z);
-  }
-  else {
-    clear_flag(Flag::Z);
-  }
-  if res & 0x10000 == 0x10000 {
-    set_flag(Flag::C);
-  }
-  else {
-    clear_flag(Flag::C);
-  }
-  if (val1 & 0x0C00 == 0x0800) && (res & 0x0400 == 0x0400) {
-    set_flag(Flag::H);
-  }
-  else {
-    clear_flag(Flag::H);
-  }
-  if (val1 & 0x8000 == 0x8000) && (val2 & 0x8000 == 0x8000) && (res & 0x8000 == 0x0000) ||
-     (val1 & 0x8000 == 0x0000) && (val2 & 0x8000 == 0x0000) && (res & 0x8000 == 0x8000) {
-    set_flag(Flag::PV);
-  }
-  else {
-    clear_flag(Flag::PV);
-  }
-  clear_flag(Flag::N);
 }
 
 #[inline]
 pub fn update_flags_for_subtraction_with_carry16(val1 : u16, val2: u16, res : u32) {
-  if res & 0x8000 == 0x8000 {
-    set_flag(Flag::S);
+  unsafe {
+    REG.lock().unwrap().update_flags_for_subtraction_with_carry16(val1, val2, res);
   }
-  else {
-    clear_flag(Flag::S);
-  }
-  if res == 0 {
-    set_flag(Flag::Z);
-  }
-  else {
-    clear_flag(Flag::Z);
-  }
-  if res & 0x10000 == 0x10000 {
-    set_flag(Flag::C);
-  }
-  else {
-    clear_flag(Flag::C);
-  }
-  if (val1 & 0x0C00 == 0x0800) && (res & 0x0400 == 0x0400) {
-    set_flag(Flag::H);
-  }
-  else {
-    clear_flag(Flag::H);
-  }
-  if (val1 & 0x8000 == 0x8000) && (val2 & 0x8000 == 0x0000) && (res & 0x8000 == 0x0000) ||
-     (val1 & 0x8000 == 0x0000) && (val2 & 0x8000 == 0x8000) && (res & 0x8000 == 0x8000) {
-    set_flag(Flag::PV);
-  }
-  else {
-    clear_flag(Flag::PV);
-  }
-  set_flag(Flag::N);
 }
 
 #[inline]
 pub fn update_flags_for_negation8(val: u8, res: u16) {
-  if res & 0x80 == 0x80  {
-    set_flag(Flag::S);
+  unsafe {
+    REG.lock().unwrap().update_flags_for_negation8(val, res);
   }
-  else {
-    clear_flag(Flag::S)
-  }
-  if res == 0 {
-    set_flag(Flag::Z);
-  }
-  else {
-    clear_flag(Flag::Z);
-  }
-  if val & 0x18 == 0x10 && res & 0x18 == 0x08 {
-    set_flag(Flag::H);
-  }
-  else {
-    clear_flag(Flag::H);
-  }
-  if val != 0x00 {
-    set_flag(Flag::C);
-  }
-  else {
-    clear_flag(Flag::C);
-  }
-  if val == 0x80 {
-    set_flag(Flag::PV);
-  }
-  else {
-    clear_flag(Flag::PV);
-  }
-  set_flag(Flag::N);
-}
-
-#[inline(always)]
-pub fn get_parity(val: u8) -> bool {
-  let mut parity = true;
-  for i in 0..7 {
-    if (val >> i) & 0x01 == 0x01 {
-      parity = !parity;
-    }
-  }
-  parity
 }
 
 #[inline]
 pub fn update_flags_for_logical_op(res: u8, set_h: bool) {
-  if res & 0x80 == 0x80  {
-    set_flag(Flag::S);
+  unsafe {
+    REG.lock().unwrap().update_flags_for_logical_op(res, set_h);
   }
-  else {
-    clear_flag(Flag::S)
-  }
-  if res == 0 {
-    set_flag(Flag::Z);
-  }
-  else {
-    clear_flag(Flag::Z);
-  }
-  if get_parity(res) {
-    set_flag(Flag::PV);
-  }
-  else {
-    clear_flag(Flag::PV);
-  }
-  if set_h {
-    set_flag(Flag::H);
-  }
-  else {
-    clear_flag(Flag::H);
-  }
-  clear_flag(Flag::C);
-  clear_flag(Flag::N);
 }
 
 #[inline]
 pub fn update_flags_for_compare8(val1: u8, val2: u8) {
-  let res = (val1 as i16) - (val2 as i16);
-  if res & 0x80 == 0x80  {
-    set_flag(Flag::S);
+  unsafe {
+    REG.lock().unwrap().update_flags_for_compare8(val1, val2);
   }
-  else {
-    clear_flag(Flag::S)
+}
+
+#[inline]
+pub fn update_flags_shift_left(val: u8, res: u8) {
+  unsafe {
+    REG.lock().unwrap().update_flags_shift_left(val, res);
   }
-  if res == 0 {
-    set_flag(Flag::Z);
-  }
-  else {
-    clear_flag(Flag::Z);
-  }
-  if (val1 & 0x80 == 0x80) && (val2 & 0x80 == 0x00) && (res & 0x80 == 0x00) ||
-     (val1 & 0x80 == 0x00) && (val2 & 0x80 == 0x80) && (res & 0x80 == 0x80) {
-    set_flag(Flag::PV);
-  }
-  else {
-    clear_flag(Flag::PV);
-  }
-  if val1 & 0x18 == 0x10 && res & 0x18 == 0x08  {
-    set_flag(Flag::H);
-  }
-  else {
-    clear_flag(Flag::H);
-  }
-  if res & 0x0100 == 0x0100 {
-    set_flag(Flag::C);
-  }
-  else {
-    clear_flag(Flag::C);
-  }
-  set_flag(Flag::N);
+}
+
+#[allow(dead_code)]
+enum InterruptMode {
+  Zero,
+  One,
+  Two
 }
 
 struct CpuState {
@@ -422,7 +168,13 @@ struct CpuState {
   pub active_cycles: u8,
   pub breakpoints: Vec<u16>,
   pub breakpoints_enabled: bool,
-  pub is_running: bool
+  pub is_running: bool,
+  pub databus_val: u8,
+  pub interrupt_mode: InterruptMode,
+  pub interrupts_enabled: bool,
+  pub interrupt_triggered: bool,
+  pub is_servicing_interrupt: bool,
+  pub is_cpu_halted: bool,
 }
 
 static mut CPU_STATE : Mutex<CpuState> = Mutex::new(CpuState { 
@@ -430,7 +182,13 @@ static mut CPU_STATE : Mutex<CpuState> = Mutex::new(CpuState {
   active_cycles: 0,
   breakpoints: Vec::new(),
   breakpoints_enabled: false,
-  is_running: false
+  is_running: false,
+  databus_val: 0x00,
+  interrupt_mode: InterruptMode::One,
+  interrupts_enabled: true,
+  interrupt_triggered: false,
+  is_servicing_interrupt: false,
+  is_cpu_halted: false
 });
 
 pub struct Cpu;
@@ -443,6 +201,14 @@ impl Cpu {
 
   pub fn set_pc(addr: u16) {
     write_reg16(RegID::PC, addr);
+  }
+
+  pub fn push_pc() {
+    let pc = read_reg16(RegID::PC);
+    let mut addr = read_reg16(RegID::SP);
+    addr = ((addr as i32) - 2) as u16;
+    write_reg16(RegID::SP, addr);
+    Memory::write16(addr, pc);
   }
 
   pub fn get_register8(reg: RegID) -> u8 {
@@ -677,6 +443,18 @@ impl Cpu {
   pub fn run() {
     unsafe { CPU_STATE.lock().unwrap().is_running = true };
     while unsafe { CPU_STATE.lock().unwrap().is_running } {
+      unsafe {
+        if  CPU_STATE.lock().unwrap().interrupt_triggered  {
+          if matches!(CPU_STATE.lock().unwrap().interrupt_mode, InterruptMode::One) {
+            let isr_addr = CPU_STATE.lock().unwrap().databus_val as u16;
+            Self::push_pc();
+            Self::set_pc(isr_addr);
+            CPU_STATE.lock().unwrap().interrupt_triggered = false;
+            CPU_STATE.lock().unwrap().is_servicing_interrupt = true;
+            println!("Servicing Interrupt mode one");
+          }
+        }
+      }
       let (text, _) = Self::disassemble(Self::get_pc());
       println!("Step:\n{:04X?}: {} ", Self::get_pc(), text);
       Self::step();
@@ -692,6 +470,21 @@ impl Cpu {
 
   pub fn stop() {
     unsafe { CPU_STATE.lock().unwrap().is_running = false };
+  }
+
+  pub fn trigger_interrupt(db_val : u8) {
+    unsafe {
+      if CPU_STATE.lock().unwrap().is_servicing_interrupt {
+        return;
+      }
+      else if CPU_STATE.lock().unwrap().interrupts_enabled {
+        CPU_STATE.lock().unwrap().databus_val = db_val;
+        CPU_STATE.lock().unwrap().interrupt_triggered = true;
+      }
+      else {
+        CPU_STATE.lock().unwrap().interrupt_triggered = false;
+      }
+    }
   }
 
 }

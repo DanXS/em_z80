@@ -1,9 +1,8 @@
-
-use std::io;
 use std::fmt;
 use std::io::prelude::*;
 use std::fs::File;
 use std::sync::Mutex;
+use std::io::ErrorKind;
 
 pub const MEM_SIZE : u32 = 0x10000;
 pub const ROM_SIZE : u32 = 0x4000;
@@ -90,14 +89,28 @@ impl Memory {
     }
   }
 
-  pub fn load_rom(filename : &str) -> io::Result<()> {
+  pub fn load_bin(filename : &str, start_addr: usize) -> std::io::Result<()> {
     println!("Loading ROM: {}", filename);
     let mut f = File::open(filename)?;
-    let mut buffer = [0; ROM_SIZE as usize];
-    let n = f.read(&mut buffer[..])?;
-    unsafe {
-      BYTES.lock().unwrap()[..n].clone_from_slice(&buffer);
+    let metadata = f.metadata()?;
+    let len = metadata.len() ;
+    if start_addr as u32 + len as u32 > MEM_SIZE {
+      let error =  std::io::Error::new(ErrorKind::OutOfMemory, "The file will extend behond the top of memory if it loaded at that location!");
+      return Err(error);
+    }
+    else {
+      unsafe {
+        f.read(&mut (BYTES.lock().unwrap()[start_addr..]))?;
+      }
     }
     Ok(())
+  }
+
+  pub fn read_slice(start_addr: usize, end_addr: usize, buffer: &mut Vec<u8>) {
+    assert!(start_addr < end_addr);
+    assert!(end_addr < MEM_SIZE as usize);
+    unsafe {
+      (BYTES.lock().unwrap()[start_addr..end_addr]).clone_into(buffer);
+    }
   }
 }

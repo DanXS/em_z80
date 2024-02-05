@@ -12,11 +12,17 @@ use slint::{ SharedString, ModelRc, VecModel };
 slint::include_modules!();
 
 fn main() {
-    hello_ula();
-    let rom_file_result = load_rom("./roms/spectrum48k.rom");
+    // Load a spectrum 48k rom image
+    let rom_file_result = load_bin("./roms/spectrum48k.rom", 0x0000);
     match rom_file_result {
         Ok(file) => file,
-        Err(error) => panic!("Problem opening the file: {:?}", error),
+        Err(error) => panic!("Problem reading the file: {:?}", error),
+    };
+    // Load a screenshot for testing display without running instuctions
+    let screenshot_file_result = load_bin("./screenshots/Jetpack.scr", 0x4000);
+    match screenshot_file_result {
+        Ok(file) => file,
+        Err(error) => panic!("Problem reading the file: {:?}", error),
     };
     set_cpu_frequency(3.5f32);
     let main_window = MainWindow::new().unwrap();
@@ -122,6 +128,20 @@ fn main() {
                 has_breakpoint(res)
             },
             _ => false,
+        }
+    });
+    std::thread::spawn(move || {
+        loop {
+            // Wait for next vertical blanking gap
+            let data = next_vblank();
+            // Read the memory display memory
+            let mut buffer: Vec<u8> = Vec::new();
+            read_memory_slice(0x4000, 0x5000, &mut buffer);
+            // Todo: render the display memory
+
+            // Trigger interrupt to notify z80 of vertical blanking gap
+            // Note: the data value is whatever the UAL put on the data bus
+            trigger_interrupt(data);
         }
     });
     main_window.run().unwrap();

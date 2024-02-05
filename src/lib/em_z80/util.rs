@@ -35,3 +35,9 @@ pub fn u8_plus_carry_wrap(val: u8, carry: u8) -> u8 {
   }
 }
 
+#[inline(always)]
+pub fn get_parity(val: u8) -> bool {
+  let count = [0,1,2,3,4,5,6,7].into_iter()
+        .fold(0, |a, b| a + ((val >> b) & 0x01));
+  count % 2 == 0
+}
