@@ -613,10 +613,39 @@ impl Register {
   pub fn update_flags_shift_left(&mut self, val: u8, res: u8) {
     self.clear_flag(Flag::S);
     if res == 0 {
-      self.clear_flag(Flag::Z);
+      self.set_flag(Flag::Z);
     }
     else {
+      self.clear_flag(Flag::Z);
+    }
+    self.clear_flag(Flag::H);
+    if get_parity(res) {
+      self.set_flag(Flag::PV);
+    }
+    else {
+      self.clear_flag(Flag::PV);
+    }
+    self.clear_flag(Flag::N);
+    if val & 0x80 == 0x80 {
+      self.set_flag(Flag::C);
+    }
+    else {
+      self.clear_flag(Flag::C);
+    }
+  }
+
+  pub fn update_flags_shift_right(&mut self, val: u8, res: u8) {
+    if res & 0x80 == 0x80 {
+      self.set_flag(Flag::S);
+    }
+    else {
+      self.clear_flag(Flag::S);
+    }
+    if res == 0 {
       self.set_flag(Flag::Z);
+    }
+    else {
+      self.clear_flag(Flag::Z);
     }
     self.clear_flag(Flag::H);
     if get_parity(res) {

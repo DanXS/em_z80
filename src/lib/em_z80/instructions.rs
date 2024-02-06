@@ -1427,56 +1427,400 @@ impl InstTrait for Instruction {
     }
   }
 
-  fn scf(&self) {
-    report_unknown("SCF");
-  }
-
-  fn ccf(&self) {
-    report_unknown("CCF");
-  }
-
   fn rla(&self) {
-   report_unknown("RLA");
+    match self.table {
+      TableID::MAIN => {
+        // RLA
+        if self.len==0 && self.code == 0x17 {
+          let val = Cpu::read_reg8(RegID::A);
+          let mut res = val << 1;
+          if Cpu::is_flag_set(Flag::C) {
+            res = res & 0x01;
+          }
+          Cpu::write_reg8(RegID::A, res);
+          Cpu::update_flags_shift_left(val, res);
+        }
+        else {
+          report_unknown("RLA");
+        }
+      },
+      _ => report_unknown("RLA")
+    }
   }
 
   fn rra(&self) {
-   report_unknown("RRA");
+    match self.table {
+      TableID::MAIN => {
+        // RRA
+        if self.len==0 && self.code == 0x1F {
+          let val = Cpu::read_reg8(RegID::A);
+          let mut res = val >> 1;
+          if Cpu::is_flag_set(Flag::C) {
+            res = res & 0x80;
+          }
+          Cpu::write_reg8(RegID::A, res);
+          Cpu::update_flags_shift_right(val, res);
+        }
+        else {
+          report_unknown("RRA");
+        }
+      },
+      _ => report_unknown("RRA")
+    }
   }
 
   fn rlca(&self) {
-   report_unknown("RLCA");
+    match self.table {
+      TableID::MAIN => {
+        // RLCA
+        if self.len==0 && self.code == 0x07 {
+          let val = Cpu::read_reg8(RegID::A);
+          let mut res = val << 1;
+          if val & 0x80 == 0x80 {
+            res = res & 0x01;
+          }
+          Cpu::write_reg8(RegID::A, res);
+          Cpu::update_flags_shift_left(val, res);
+        }
+        else {
+          report_unknown("RLCA");
+        }
+      },
+      _ => report_unknown("RLCA")
+    }
   }
 
   fn rrca(&self) {
-   report_unknown("RRCA");
-  }
-
-  fn rrc(&self) {
-   report_unknown("RRC");
-  }
-
-  fn rlc(&self) {
-   report_unknown("RLC");
-  }
-
-  fn rr(&self) {
-   report_unknown("RR");
+    match self.table {
+      TableID::MAIN => {
+        // RRCA
+        if self.len==0 && self.code == 0x0F {
+          let val = Cpu::read_reg8(RegID::A);
+          let mut res = val >> 1;
+          if val & 0x01 == 0x01 {
+            res = res & 0x80;
+          }
+          Cpu::write_reg8(RegID::A, res);
+          Cpu::update_flags_shift_right(val, res);
+        }
+        else {
+          report_unknown("RRCA");
+        }
+      },
+      _ => report_unknown("RRCA")
+    }
   }
 
   fn rl(&self) {
-   report_unknown("RL");
+    match self.table {
+      TableID::BIT => {
+        // RL r
+        if self.len==0 && self.code & 0xF8 == 0x10 {
+          let reg_map = [RegID::B, RegID::C, RegID::D, RegID::E, RegID::H, RegID::L, RegID::HL, RegID::A];
+          let r = self.code & 0x07;
+          let reg = reg_map[r as usize];
+          if matches!(reg, RegID::HL) {
+            // RL (HL)
+            let addr = Cpu::read_reg16(RegID::HL);
+            let val = Memory::read8(addr);
+            let mut res = val << 1;
+            if Cpu::is_flag_set(Flag::C) {
+              res = res & 0x01;
+            }
+            Memory::write8(addr, res);
+            Cpu::write_reg8(RegID::A, res);
+            Cpu::update_flags_shift_left(val, res);
+          }
+          else {
+            let val = Cpu::read_reg8(reg);
+            let mut res = val << 1;
+            if Cpu::is_flag_set(Flag::C) {
+              res = res & 0x01;
+            }
+            Cpu::write_reg8(reg, res);
+            Cpu::update_flags_shift_left(val, res);
+          }
+        }
+        else {
+          report_unknown("RL");
+        }
+      },
+      TableID::IXBIT => {
+        if self.len==1 && self.code == 0x16 {
+          // Todo handle ixbit operations
+        }
+        else {
+          report_unknown("RL");
+        }
+      },
+      TableID::IYBIT => {
+        if self.len==1 && self.code == 0x16 {
+          // Todo handle iybit operations
+        }
+        else {
+          report_unknown("RL");
+        }
+      },
+      _ => report_unknown("RL")
+    }
   }
 
+  fn rr(&self) {
+    match self.table {
+      TableID::BIT => {
+        // RR r
+        if self.len==0 && self.code & 0xF8 == 0x18 {
+          let reg_map = [RegID::B, RegID::C, RegID::D, RegID::E, RegID::H, RegID::L, RegID::HL, RegID::A];
+          let r = self.code & 0x07;
+          let reg = reg_map[r as usize];
+          if matches!(reg, RegID::HL) {
+            // RR (HL)
+            let addr = Cpu::read_reg16(RegID::HL);
+            let val = Memory::read8(addr);
+            let mut res = val >> 1;
+            if Cpu::is_flag_set(Flag::C) {
+              res = res & 0x80;
+            }
+            Memory::write8(addr, res);
+            Cpu::write_reg8(RegID::A, res);
+            Cpu::update_flags_shift_left(val, res);
+          }
+          else {
+            let val = Cpu::read_reg8(reg);
+            let mut res = val >> 1;
+            if Cpu::is_flag_set(Flag::C) {
+              res = res & 0x80;
+            }
+            Cpu::write_reg8(reg, res);
+            Cpu::update_flags_shift_left(val, res);
+          }
+        }
+        else {
+          report_unknown("RR");
+        }
+      },
+      TableID::IXBIT => {
+        if self.len==1 && self.code == 0x1E {
+          // Todo handle ixbit operations
+        }
+        else {
+          report_unknown("RR");
+        }
+      },
+      TableID::IYBIT => {
+        if self.len==1 && self.code == 0x1E {
+          // Todo handle iybit operations
+        }
+        else {
+          report_unknown("RR");
+        }
+      },
+      _ => report_unknown("RR")
+    }
+  }
+
+  fn rlc(&self) {
+    match self.table {
+      TableID::BIT => {
+        // RLC r
+        if self.len==0 && self.code & 0xF8 == 0x00 {
+          let reg_map = [RegID::B, RegID::C, RegID::D, RegID::E, RegID::H, RegID::L, RegID::HL, RegID::A];
+          let r = self.code & 0x07;
+          let reg = reg_map[r as usize];
+          if matches!(reg, RegID::HL) {
+            // RLC (HL)
+            let addr = Cpu::read_reg16(RegID::HL);
+            let val = Memory::read8(addr);
+            let mut res = val << 1;
+            if val & 0x80 == 0x80 {
+              res = res & 0x01;
+            }
+            Memory::write8(addr, res);
+            Cpu::write_reg8(RegID::A, res);
+            Cpu::update_flags_shift_left(val, res);
+          }
+          else {
+            let val = Cpu::read_reg8(reg);
+            let mut res = val << 1;
+            if val & 0x80 == 0x80 {
+              res = res & 0x01;
+            }
+            Cpu::write_reg8(reg, res);
+            Cpu::update_flags_shift_left(val, res);
+          }
+        }
+        else {
+          report_unknown("RLC");
+        }
+      },
+      TableID::IXBIT => {
+        if self.len==1 && self.code == 0x06 {
+          // Todo handle ixbit operations
+        }
+        else {
+          report_unknown("RLC");
+        }
+      },
+      TableID::IYBIT => {
+        if self.len==1 && self.code == 0x06 {
+          // Todo handle iybit operations
+        }
+        else {
+          report_unknown("RLC");
+        }
+      },
+      _ => report_unknown("RLC")
+    }
+  }
+
+  fn rrc(&self) {
+    match self.table {
+      TableID::BIT => {
+        // RRC r
+        if self.len==0 && self.code & 0xF8 == 0x08 {
+          let reg_map = [RegID::B, RegID::C, RegID::D, RegID::E, RegID::H, RegID::L, RegID::HL, RegID::A];
+          let r = self.code & 0x07;
+          let reg = reg_map[r as usize];
+          if matches!(reg, RegID::HL) {
+            // RRC (HL)
+            let addr = Cpu::read_reg16(RegID::HL);
+            let val = Memory::read8(addr);
+            let mut res = val >> 1;
+            if val & 0x01 == 0x01 {
+              res = res & 0x80;
+            }
+            Memory::write8(addr, res);
+            Cpu::write_reg8(RegID::A, res);
+            Cpu::update_flags_shift_left(val, res);
+          }
+          else {
+            let val = Cpu::read_reg8(reg);
+            let mut res = val >> 1;
+            if val & 0x01 == 0x01 {
+              res = res & 0x80;
+            }
+            Cpu::write_reg8(reg, res);
+            Cpu::update_flags_shift_left(val, res);
+          }
+        }
+        else {
+          report_unknown("RRC");
+        }
+      },
+      TableID::IXBIT => {
+        if self.len==1 && self.code == 0x0E {
+          // Todo handle ixbit operations
+        }
+        else {
+          report_unknown("RRC");
+        }
+      },
+      TableID::IYBIT => {
+        if self.len==1 && self.code == 0x0E {
+          // Todo handle iybit operations
+        }
+        else {
+          report_unknown("RRC");
+        }
+      },
+      _ => report_unknown("RRC")
+    }
+  }
+ 
   fn sla(&self) {
-   report_unknown("SLA");
+    match self.table {
+      TableID::BIT => {
+        // SLA r
+        if self.len==0 && self.code & 0xF8 == 0x28 {
+          let reg_map = [RegID::B, RegID::C, RegID::D, RegID::E, RegID::H, RegID::L, RegID::HL, RegID::A];
+          let r = self.code & 0x07;
+          let reg = reg_map[r as usize];
+          if matches!(reg, RegID::HL) {
+            // SLA (HL)
+            let addr = Cpu::read_reg16(RegID::HL);
+            let val = Memory::read8(addr);
+            let res = val << 1;
+            Memory::write8(addr, res);
+            Cpu::write_reg8(RegID::A, res);
+            Cpu::update_flags_shift_left(val, res);
+          }
+          else {
+            let val = Cpu::read_reg8(reg);
+            let res = val << 1;
+            Cpu::write_reg8(reg, res);
+            Cpu::update_flags_shift_left(val, res);
+          }
+        }
+        else {
+          report_unknown("SLA");
+        }
+      },
+      TableID::IXBIT => {
+        if self.len==1 && self.code == 0x2E {
+          // Todo handle ixbit operations
+        }
+        else {
+          report_unknown("SLA");
+        }
+      },
+      TableID::IYBIT => {
+        if self.len==1 && self.code == 0x2E {
+          // Todo handle iybit operations
+        }
+        else {
+          report_unknown("SLA");
+        }
+      },
+      _ => report_unknown("SLA")
+    }
   }
 
   fn sra(&self) {
-   report_unknown("SRA");
-  }
-
-  fn sll(&self) {
-   report_unknown("SLL");
+    match self.table {
+      TableID::BIT => {
+        // SRA r
+        if self.len==0 && self.code & 0xF8 == 0x28 {
+          let reg_map = [RegID::B, RegID::C, RegID::D, RegID::E, RegID::H, RegID::L, RegID::HL, RegID::A];
+          let r = self.code & 0x07;
+          let reg = reg_map[r as usize];
+          if matches!(reg, RegID::HL) {
+            // SRA (HL)
+            let addr = Cpu::read_reg16(RegID::HL);
+            let val = Memory::read8(addr);
+            let res = ((val as i8) >> 1) as u8;
+            Memory::write8(addr, res);
+            Cpu::write_reg8(RegID::A, res);
+            Cpu::update_flags_shift_right(val, res);
+          }
+          else {
+            let val = Cpu::read_reg8(reg);
+            let res = ((val as i8) >> 1) as u8;
+            Cpu::write_reg8(reg, res);
+            Cpu::update_flags_shift_right(val, res);
+          }
+        }
+        else {
+          report_unknown("SRA");
+        }
+      },
+      TableID::IXBIT => {
+        if self.len==1 && self.code == 0x2E {
+          // Todo handle ixbit operations
+        }
+        else {
+          report_unknown("SRA");
+        }
+      },
+      TableID::IYBIT => {
+        if self.len==1 && self.code == 0x2E {
+          // Todo handle iybit operations
+        }
+        else {
+          report_unknown("SRA");
+        }
+      },
+      _ => report_unknown("SRA")
+    }
   }
 
   // SRL Instruction
@@ -1495,13 +1839,13 @@ impl InstTrait for Instruction {
             let res = val >> 1;
             Memory::write8(addr, res);
             Cpu::write_reg8(RegID::A, res);
-            Cpu::update_flags_shift_left(val, res);
+            Cpu::update_flags_shift_right(val, res);
           }
           else {
             let val = Cpu::read_reg8(reg);
             let res = val >> 1;
             Cpu::write_reg8(reg, res);
-            Cpu::update_flags_shift_left(val, res);
+            Cpu::update_flags_shift_right(val, res);
           }
         }
         else {
@@ -1509,16 +1853,16 @@ impl InstTrait for Instruction {
         }
       },
       TableID::IXBIT => {
-        if self.len==1 && self.code & 0xF8 == 0xC8 {
-
+        if self.len==1 && self.code == 0x3E {
+          // Todo handle ixbit operations
         }
         else {
           report_unknown("SRL");
         }
       },
       TableID::IYBIT => {
-        if self.len==1 && self.code & 0xF8 == 0xC8 {
-
+        if self.len==1 && self.code == 0x3E {
+          // Todo handle iybit operations
         }
         else {
           report_unknown("SRL");
@@ -1526,18 +1870,6 @@ impl InstTrait for Instruction {
       },
       _ => report_unknown("SRL")
     }
-  }
-
-  fn bit(&self) {
-    report_unknown("BIT");
-  }
-
-  fn res(&self) {
-    report_unknown("RES");
-  }
-
-  fn set(&self) {
-    report_unknown("SET");
   }
 
   // JP Instruction
@@ -2092,12 +2424,24 @@ impl InstTrait for Instruction {
     }
   }
 
-  fn reti(&self) {
-    report_unknown("RETI");
+  fn bit(&self) {
+    report_unknown("BIT");
   }
 
-  fn retn(&self) {
-    report_unknown("RETN");
+  fn res(&self) {
+    report_unknown("RES");
+  }
+
+  fn set(&self) {
+    report_unknown("SET");
+  }
+
+  fn scf(&self) {
+    report_unknown("SCF");
+  }
+
+  fn ccf(&self) {
+    report_unknown("CCF");
   }
 
   fn rst(&self) {
@@ -2137,11 +2481,77 @@ impl InstTrait for Instruction {
   }
 
   fn di(&self) {
-    report_unknown("DI");
+    match self.table {
+      TableID::MAIN => {
+        if self.code == 0xF3 {
+          Cpu::disable_interrupts();
+        }
+        else {
+          report_unknown("DI");
+        }
+      },
+      _ => report_unknown("DI")
+    }
   }
 
   fn ei(&self) {
-    report_unknown("EI");
+    match self.table {
+      TableID::MAIN => {
+        if self.code == 0xFB {
+          Cpu::enable_interrupts();
+        }
+        else {
+          report_unknown("DI");
+        }
+      },
+      _ => report_unknown("DI")
+    }
+  }
+
+  fn halt(&self) {
+    match self.table {
+      TableID::MAIN => {
+        if self.code == 0x76 {
+          Cpu::halt_until_interrupt();
+        }
+        else {
+          report_unknown("HALT");
+        }
+      },
+      _ => report_unknown("HALT")
+    }
+  }
+
+  fn im(&self) {
+    report_unknown("IM");
+  }
+
+  fn reti(&self) {
+    match self.table {
+      TableID::MISC => {
+        if self.code == 0x4D {
+          Cpu::return_from_interrupt();
+        }
+        else {
+          report_unknown("RETI");
+        }
+      },
+      _ => report_unknown("RETI")
+    }
+  }
+
+  fn retn(&self) {
+    match self.table {
+      TableID::MISC => {
+        if self.len == 0 && self.code == 0x45 {
+          Cpu::return_from_non_maskable_interrupt();
+        }
+        else {
+          report_unknown("RETN");
+        }
+      },
+      _ => report_unknown("RETN")
+    }
   }
 
   fn mlt(&self) {
@@ -2164,16 +2574,6 @@ impl InstTrait for Instruction {
     report_unknown("OUTD");
   }
 
-  fn im(&self) {
-    report_unknown("IM");
-  }
-
-  fn halt(&self) {
-    report_unknown("HALT");
-  }
-
-
-
   // The following are unsupported on the z80, but are legal for the z180 should we wish
   // to implement them later, keeping stubs to warn user if encountered
   fn in0(&self) {
@@ -2191,6 +2591,10 @@ impl InstTrait for Instruction {
   fn tstio(&self) {
     report_not_supported("TSTIO");
   }
+
+  fn sll(&self) {
+    report_not_supported("SLL");
+   }
 
   fn slp(&self) {
     report_not_supported("SLP");

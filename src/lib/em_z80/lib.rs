@@ -164,7 +164,15 @@ pub fn update_breakpoints_enabled(enabled: bool) {
 }
 
 // Trigger an interrupt with a given value on the databus
-// Note: This would normally be done by an external peripheral
+// Note: This would normally be done by the ULA every verticle blanking gap
+// in the case of the ZX Spectrum
+pub fn trigger_interrupt(db_val : u8) {
+  Cpu::trigger_interrupt(db_val);
+}
+
+// Trigger non maskable interrupts
+// Note: This would normally be done by external peripherals plugged into the expansion 
+// port in the case of the ZX Spectrum
 pub fn trigger_non_maskable_interrupt(db_val : u8) {
   Cpu::trigger_non_maskable_interrupt(db_val);
 }

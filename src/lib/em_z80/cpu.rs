@@ -49,6 +49,7 @@ struct CpuState {
   pub interrupt_iff1: bool,
   pub interrupt_iff2: bool,
   pub is_cpu_halted: bool,
+  pub interrupt_triggered: bool
 }
 
 static mut CPU_STATE : Mutex<CpuState> = Mutex::new(CpuState { 
@@ -61,7 +62,8 @@ static mut CPU_STATE : Mutex<CpuState> = Mutex::new(CpuState {
   interrupt_mode: InterruptMode::One,
   interrupt_iff1: false,
   interrupt_iff2: false,
-  is_cpu_halted: false
+  is_cpu_halted: false,
+  interrupt_triggered: false
 });
 
 pub struct Cpu;
@@ -195,6 +197,13 @@ impl Cpu {
   }
 
   #[inline]
+  pub fn update_flags_shift_right(val: u8, res: u8) {
+    unsafe {
+      REG.lock().unwrap().update_flags_shift_right(val, res);
+    }
+  }
+
+  #[inline]
   pub fn get_register_view_string() -> String {
     unsafe {
       REG.lock().unwrap().to_string()
@@ -210,11 +219,19 @@ impl Cpu {
   }
 
   pub fn push_pc() {
-    let pc = Self::read_reg16(RegID::PC);
+    let pc = Self::get_pc();
     let mut addr = Self::read_reg16(RegID::SP);
     addr = ((addr as i32) - 2) as u16;
     Self::write_reg16(RegID::SP, addr);
     Memory::write16(addr, pc);
+  }
+
+  pub fn pop_pc() {
+    let mut addr = Self::read_reg16(RegID::SP);
+    let pc = Memory::read16(addr);
+    addr = ((addr as i32) + 2) as u16;
+    Self::write_reg16(RegID::SP, addr);
+    Self::set_pc(pc);
   }
 
   pub fn get_register8(reg: RegID) -> u8 {
@@ -281,6 +298,40 @@ impl Cpu {
   pub fn set_acitve_cycles(cycles: u8) {
     unsafe {
       CPU_STATE.lock().unwrap().active_cycles = cycles;
+    }
+  }
+
+  pub fn enable_interrupts() {
+    unsafe {
+      CPU_STATE.lock().unwrap().interrupt_iff1 = true;
+      CPU_STATE.lock().unwrap().interrupt_iff2 = true;
+    }
+  }
+
+  pub fn disable_interrupts() {
+    unsafe {
+      CPU_STATE.lock().unwrap().interrupt_iff1 = false;
+      CPU_STATE.lock().unwrap().interrupt_iff2 = false;
+    }
+  }
+
+  pub fn halt_until_interrupt() {
+    unsafe {
+      CPU_STATE.lock().unwrap().is_cpu_halted = true;
+    }
+  }
+
+  pub fn return_from_interrupt() {
+    unsafe {
+      Self::pop_pc();
+      CPU_STATE.lock().unwrap().interrupt_triggered = false;
+    }
+  }
+
+  pub fn return_from_non_maskable_interrupt() {
+    unsafe {
+      Self::pop_pc();
+      CPU_STATE.lock().unwrap().interrupt_iff1 = CPU_STATE.lock().unwrap().interrupt_iff2;
     }
   }
 
@@ -446,24 +497,8 @@ impl Cpu {
     unsafe { CPU_STATE.lock().unwrap().is_running = true };
     while unsafe { CPU_STATE.lock().unwrap().is_running } {
       unsafe {
-        // Handle interrupts
-        if  CPU_STATE.lock().unwrap().interrupt_iff1 == true || 
-            CPU_STATE.lock().unwrap().interrupt_iff2 == true  {
-          if matches!(CPU_STATE.lock().unwrap().interrupt_mode, InterruptMode::One) {
-            let isr_addr = CPU_STATE.lock().unwrap().databus_val as u16;
-            // Perform at one instruction before interrupt in case it is a return
-            // (As documented)
-            let (text, _) = Self::disassemble(Self::get_pc());
-            println!("Step:\n{:04X?}: {} ", Self::get_pc(), text);
-            Self::step();
-            // Save the program counter to the stack
-            Self::push_pc();
-            Self::set_pc(isr_addr);
-            println!("Servicing Interrupt in Mode One");
-            // Reset interrupt flip flops
-            CPU_STATE.lock().unwrap().interrupt_iff1 = false;
-            CPU_STATE.lock().unwrap().interrupt_iff2 = false;
-          }
+        if CPU_STATE.lock().unwrap().is_cpu_halted {
+          continue;
         }
       }
       let (text, _) = Self::disassemble(Self::get_pc());
@@ -475,6 +510,21 @@ impl Cpu {
           break;
         }
       }
+      unsafe {
+        // Handle interrupts
+        if  CPU_STATE.lock().unwrap().interrupt_triggered  {
+          if matches!(CPU_STATE.lock().unwrap().interrupt_mode, InterruptMode::One) {
+            let isr_addr = CPU_STATE.lock().unwrap().databus_val as u16;
+            // Save the program counter to the stack
+            Self::push_pc();
+            Self::set_pc(isr_addr);
+            println!("Servicing Interrupt in Mode One");
+            CPU_STATE.lock().unwrap().is_cpu_halted = false;
+          }
+          CPU_STATE.lock().unwrap().interrupt_iff1 = false;
+          CPU_STATE.lock().unwrap().interrupt_triggered = false;
+        }
+      }
     }
     unsafe { CPU_STATE.lock().unwrap().is_running = false };
   }
@@ -483,18 +533,30 @@ impl Cpu {
     unsafe { CPU_STATE.lock().unwrap().is_running = false };
   }
 
-  pub fn trigger_non_maskable_interrupt(db_val : u8) {
+  pub fn trigger_interrupt(db_val : u8) {
     unsafe {
-      if CPU_STATE.lock().unwrap().interrupt_iff1 == false && 
-         CPU_STATE.lock().unwrap().interrupt_iff2 == false {
+      if !CPU_STATE.lock().unwrap().interrupt_iff1 {
           // Don't accept interrupts
         return;
       }
       else {
         // Notify the running thread that an interrupt has been triggered
         CPU_STATE.lock().unwrap().databus_val = db_val;
-        CPU_STATE.lock().unwrap().interrupt_iff1 = true;
-        CPU_STATE.lock().unwrap().interrupt_iff2 = true;
+        CPU_STATE.lock().unwrap().interrupt_triggered = true;
+      }
+    }
+  }
+
+  pub fn trigger_non_maskable_interrupt(db_val : u8) {
+    unsafe {
+      if !CPU_STATE.lock().unwrap().interrupt_iff2 {
+          // Don't accept non maskable interrupts
+        return;
+      }
+      else {
+        // Notify the running thread that an interrupt has been triggered
+        CPU_STATE.lock().unwrap().databus_val = db_val;
+        CPU_STATE.lock().unwrap().interrupt_triggered = true;
       }
     }
   }
