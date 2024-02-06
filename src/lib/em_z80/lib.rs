@@ -165,8 +165,8 @@ pub fn update_breakpoints_enabled(enabled: bool) {
 
 // Trigger an interrupt with a given value on the databus
 // Note: This would normally be done by an external peripheral
-pub fn trigger_interrupt(db_val : u8) {
-  Cpu::trigger_interrupt(db_val);
+pub fn trigger_non_maskable_interrupt(db_val : u8) {
+  Cpu::trigger_non_maskable_interrupt(db_val);
 }
 
 pub fn read_memory_slice(start_addr: usize, end_addr: usize, buffer: &mut Vec<u8>) {

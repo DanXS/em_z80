@@ -30,131 +30,6 @@ pub static mut REG : Mutex<Register> = Mutex::new(Register {
   wz: 0x0000
 });
 
-#[inline]
-pub fn read_reg8(reg: RegID) -> u8 {
-  unsafe {
-    REG.lock().unwrap().read8(reg)
-  }
-}
-
-#[inline]
-pub fn read_reg16(reg: RegID) -> u16 {
-  unsafe {
-    REG.lock().unwrap().read16(reg)
-  }
-}
-
-#[inline]
-pub fn write_reg8(reg: RegID, val: u8) {
-  unsafe {
-    REG.lock().unwrap().write8(reg, val);
-  }
-}
-
-#[inline]
-pub fn write_reg16(reg: RegID, val: u16) {
-  unsafe {
-    REG.lock().unwrap().write16(reg, val);
-  }
-}
-
-#[inline]
-pub fn set_flag(flag: Flag) {
-  unsafe {
-    REG.lock().unwrap().set_flag(flag);
-  }
-}
-
-#[inline]
-pub fn clear_flag(flag: Flag) {
-  unsafe {
-    REG.lock().unwrap().clear_flag(flag);
-  }
-}
-
-#[inline]
-pub fn is_flag_set(flag: Flag) -> bool {
-  unsafe {
-    REG.lock().unwrap().is_flag_set(flag)
-  }
-}
-
-#[inline]
-pub fn update_flags_for_inc(val : u8, inc_val : u8) {
-  unsafe {
-    REG.lock().unwrap().update_flags_for_inc(val, inc_val);
-  }
-}
-
-#[inline]
-pub fn update_flags_for_dec(val : u8, dec_val : u8) {
-  unsafe {
-    REG.lock().unwrap().update_flags_for_dec(val, dec_val);
-  }
-}
-
-#[inline]
-pub fn update_flags_for_addition8(val1 : u8, val2: u8, res: u16) {
-  unsafe {
-    REG.lock().unwrap().update_flags_for_addition8(val1, val2, res);
-  }
-}
-
-#[inline]
-pub fn update_flags_for_subtraction8(val1 : u8, val2: u8, res: u16) {
-  unsafe {
-    REG.lock().unwrap().update_flags_for_subtraction8(val1, val2, res);
-  }
-}
-
-#[inline]
-pub fn update_flags_for_addition16(val1: u16, res: u32) {
-  unsafe {
-    REG.lock().unwrap().update_flags_for_addition16(val1, res);
-  }
-}
-
-#[inline]
-pub fn update_flags_for_addition_with_carry16(val1: u16, val2: u16, res: u32) {
-  unsafe {
-    REG.lock().unwrap().update_flags_for_addition_with_carry16(val1, val2, res);
-  }
-}
-
-#[inline]
-pub fn update_flags_for_subtraction_with_carry16(val1 : u16, val2: u16, res : u32) {
-  unsafe {
-    REG.lock().unwrap().update_flags_for_subtraction_with_carry16(val1, val2, res);
-  }
-}
-
-#[inline]
-pub fn update_flags_for_negation8(val: u8, res: u16) {
-  unsafe {
-    REG.lock().unwrap().update_flags_for_negation8(val, res);
-  }
-}
-
-#[inline]
-pub fn update_flags_for_logical_op(res: u8, set_h: bool) {
-  unsafe {
-    REG.lock().unwrap().update_flags_for_logical_op(res, set_h);
-  }
-}
-
-#[inline]
-pub fn update_flags_for_compare8(val1: u8, val2: u8) {
-  unsafe {
-    REG.lock().unwrap().update_flags_for_compare8(val1, val2);
-  }
-}
-
-#[inline]
-pub fn update_flags_shift_left(val: u8, res: u8) {
-  unsafe {
-    REG.lock().unwrap().update_flags_shift_left(val, res);
-  }
-}
 
 #[allow(dead_code)]
 enum InterruptMode {
@@ -171,9 +46,8 @@ struct CpuState {
   pub is_running: bool,
   pub databus_val: u8,
   pub interrupt_mode: InterruptMode,
-  pub interrupts_enabled: bool,
-  pub interrupt_triggered: bool,
-  pub is_servicing_interrupt: bool,
+  pub interrupt_iff1: bool,
+  pub interrupt_iff2: bool,
   pub is_cpu_halted: bool,
 }
 
@@ -185,9 +59,8 @@ static mut CPU_STATE : Mutex<CpuState> = Mutex::new(CpuState {
   is_running: false,
   databus_val: 0x00,
   interrupt_mode: InterruptMode::One,
-  interrupts_enabled: true,
-  interrupt_triggered: false,
-  is_servicing_interrupt: false,
+  interrupt_iff1: false,
+  interrupt_iff2: false,
   is_cpu_halted: false
 });
 
@@ -195,48 +68,181 @@ pub struct Cpu;
 
 impl Cpu {
 
+  #[inline]
+  pub fn read_reg8(reg: RegID) -> u8 {
+    unsafe {
+      REG.lock().unwrap().read8(reg)
+    }
+  }
+
+  #[inline]
+  pub fn read_reg16(reg: RegID) -> u16 {
+    unsafe {
+      REG.lock().unwrap().read16(reg)
+    }
+  }
+
+  #[inline]
+  pub fn write_reg8(reg: RegID, val: u8) {
+    unsafe {
+      REG.lock().unwrap().write8(reg, val);
+    }
+  }
+
+  #[inline]
+  pub fn write_reg16(reg: RegID, val: u16) {
+    unsafe {
+      REG.lock().unwrap().write16(reg, val);
+    }
+  }
+
+  #[inline]
+  pub fn set_flag(flag: Flag) {
+    unsafe {
+      REG.lock().unwrap().set_flag(flag);
+    }
+  }
+
+  #[inline]
+  pub fn clear_flag(flag: Flag) {
+    unsafe {
+      REG.lock().unwrap().clear_flag(flag);
+    }
+  }
+
+  #[inline]
+  pub fn is_flag_set(flag: Flag) -> bool {
+    unsafe {
+      REG.lock().unwrap().is_flag_set(flag)
+    }
+  }
+
+  #[inline]
+  pub fn update_flags_for_inc(val : u8, inc_val : u8) {
+    unsafe {
+      REG.lock().unwrap().update_flags_for_inc(val, inc_val);
+    }
+  }
+
+  #[inline]
+  pub fn update_flags_for_dec(val : u8, dec_val : u8) {
+    unsafe {
+      REG.lock().unwrap().update_flags_for_dec(val, dec_val);
+    }
+  }
+
+  #[inline]
+  pub fn update_flags_for_addition8(val1 : u8, val2: u8, res: u16) {
+    unsafe {
+      REG.lock().unwrap().update_flags_for_addition8(val1, val2, res);
+    }
+  }
+
+  #[inline]
+  pub fn update_flags_for_subtraction8(val1 : u8, val2: u8, res: u16) {
+    unsafe {
+      REG.lock().unwrap().update_flags_for_subtraction8(val1, val2, res);
+    }
+  }
+
+  #[inline]
+  pub fn update_flags_for_addition16(val1: u16, res: u32) {
+    unsafe {
+      REG.lock().unwrap().update_flags_for_addition16(val1, res);
+    }
+  }
+
+  #[inline]
+  pub fn update_flags_for_addition_with_carry16(val1: u16, val2: u16, res: u32) {
+    unsafe {
+      REG.lock().unwrap().update_flags_for_addition_with_carry16(val1, val2, res);
+    }
+  }
+
+  #[inline]
+  pub fn update_flags_for_subtraction_with_carry16(val1 : u16, val2: u16, res : u32) {
+    unsafe {
+      REG.lock().unwrap().update_flags_for_subtraction_with_carry16(val1, val2, res);
+    }
+  }
+
+  #[inline]
+  pub fn update_flags_for_negation8(val: u8, res: u16) {
+    unsafe {
+      REG.lock().unwrap().update_flags_for_negation8(val, res);
+    }
+  }
+
+  #[inline]
+  pub fn update_flags_for_logical_op(res: u8, set_h: bool) {
+    unsafe {
+      REG.lock().unwrap().update_flags_for_logical_op(res, set_h);
+    }
+  }
+
+  #[inline]
+  pub fn update_flags_for_compare8(val1: u8, val2: u8) {
+    unsafe {
+      REG.lock().unwrap().update_flags_for_compare8(val1, val2);
+    }
+  }
+
+  #[inline]
+  pub fn update_flags_shift_left(val: u8, res: u8) {
+    unsafe {
+      REG.lock().unwrap().update_flags_shift_left(val, res);
+    }
+  }
+
+  #[inline]
+  pub fn get_register_view_string() -> String {
+    unsafe {
+      REG.lock().unwrap().to_string()
+    }
+  }
+
   pub fn get_pc() -> u16 {
-    read_reg16(RegID::PC)
+    Self::read_reg16(RegID::PC)
   }
 
   pub fn set_pc(addr: u16) {
-    write_reg16(RegID::PC, addr);
+    Self::write_reg16(RegID::PC, addr);
   }
 
   pub fn push_pc() {
-    let pc = read_reg16(RegID::PC);
-    let mut addr = read_reg16(RegID::SP);
+    let pc = Self::read_reg16(RegID::PC);
+    let mut addr = Self::read_reg16(RegID::SP);
     addr = ((addr as i32) - 2) as u16;
-    write_reg16(RegID::SP, addr);
+    Self::write_reg16(RegID::SP, addr);
     Memory::write16(addr, pc);
   }
 
   pub fn get_register8(reg: RegID) -> u8 {
-    read_reg8(reg)
+    Self::read_reg8(reg)
   }
 
   pub fn set_register8(reg: RegID, val: u8) {
-    write_reg8(reg, val);
+    Self::write_reg8(reg, val);
   }
 
   pub fn get_register16(reg: RegID) -> u16 {
-    read_reg16(reg)
+    Self::read_reg16(reg)
   }
 
   pub fn set_register16(reg: RegID, val: u16) {
-    write_reg16(reg, val);
+    Self::write_reg16(reg, val);
   }
 
   pub fn set_status_flag(flag: Flag) {
-    set_flag(flag);
+    Self::set_flag(flag);
   }
   
   pub fn clear_status_flag(flag: Flag) {
-    clear_flag(flag);
+    Self::clear_flag(flag);
   }
   
   pub fn get_status_flag(flag: Flag) -> bool {
-    is_flag_set(flag)
+    Self::is_flag_set(flag)
   }
 
   pub fn get_register_from_str(reg_str: &str) -> RegID {
@@ -276,10 +282,6 @@ impl Cpu {
     unsafe {
       CPU_STATE.lock().unwrap().active_cycles = cycles;
     }
-  }
-
-  pub fn get_register_view_string() -> String {
-    unsafe { REG.lock().unwrap().to_string() }
   }
 
   pub fn toggle_breakpoint(addr: u16) {
@@ -444,14 +446,23 @@ impl Cpu {
     unsafe { CPU_STATE.lock().unwrap().is_running = true };
     while unsafe { CPU_STATE.lock().unwrap().is_running } {
       unsafe {
-        if  CPU_STATE.lock().unwrap().interrupt_triggered  {
+        // Handle interrupts
+        if  CPU_STATE.lock().unwrap().interrupt_iff1 == true || 
+            CPU_STATE.lock().unwrap().interrupt_iff2 == true  {
           if matches!(CPU_STATE.lock().unwrap().interrupt_mode, InterruptMode::One) {
             let isr_addr = CPU_STATE.lock().unwrap().databus_val as u16;
+            // Perform at one instruction before interrupt in case it is a return
+            // (As documented)
+            let (text, _) = Self::disassemble(Self::get_pc());
+            println!("Step:\n{:04X?}: {} ", Self::get_pc(), text);
+            Self::step();
+            // Save the program counter to the stack
             Self::push_pc();
             Self::set_pc(isr_addr);
-            CPU_STATE.lock().unwrap().interrupt_triggered = false;
-            CPU_STATE.lock().unwrap().is_servicing_interrupt = true;
-            println!("Servicing Interrupt mode one");
+            println!("Servicing Interrupt in Mode One");
+            // Reset interrupt flip flops
+            CPU_STATE.lock().unwrap().interrupt_iff1 = false;
+            CPU_STATE.lock().unwrap().interrupt_iff2 = false;
           }
         }
       }
@@ -472,24 +483,20 @@ impl Cpu {
     unsafe { CPU_STATE.lock().unwrap().is_running = false };
   }
 
-  pub fn trigger_interrupt(db_val : u8) {
+  pub fn trigger_non_maskable_interrupt(db_val : u8) {
     unsafe {
-      if CPU_STATE.lock().unwrap().is_servicing_interrupt {
+      if CPU_STATE.lock().unwrap().interrupt_iff1 == false && 
+         CPU_STATE.lock().unwrap().interrupt_iff2 == false {
+          // Don't accept interrupts
         return;
       }
-      else if CPU_STATE.lock().unwrap().interrupts_enabled {
-        CPU_STATE.lock().unwrap().databus_val = db_val;
-        CPU_STATE.lock().unwrap().interrupt_triggered = true;
-      }
       else {
-        CPU_STATE.lock().unwrap().interrupt_triggered = false;
+        // Notify the running thread that an interrupt has been triggered
+        CPU_STATE.lock().unwrap().databus_val = db_val;
+        CPU_STATE.lock().unwrap().interrupt_iff1 = true;
+        CPU_STATE.lock().unwrap().interrupt_iff2 = true;
       }
     }
   }
 
 }
-
-
-
-
-

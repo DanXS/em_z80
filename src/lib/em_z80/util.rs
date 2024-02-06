@@ -41,3 +41,13 @@ pub fn get_parity(val: u8) -> bool {
         .fold(0, |a, b| a + ((val >> b) & 0x01));
   count % 2 == 0
 }
+
+#[inline]
+pub fn report_unknown(opcode_str: &str) {
+  println!("Unknown {} instruction!", opcode_str);
+}
+
+#[inline]
+pub fn report_not_supported(opcode_str: &str) {
+  println!("{} instruction is not supported on the z80 - z180 only!", opcode_str);
+}

@@ -141,7 +141,7 @@ fn main() {
 
             // Trigger interrupt to notify z80 of vertical blanking gap
             // Note: the data value is whatever the UAL put on the data bus
-            trigger_interrupt(data);
+            trigger_non_maskable_interrupt(data);
         }
     });
     main_window.run().unwrap();
