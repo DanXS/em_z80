@@ -8,8 +8,20 @@ export global Logic  {
 }
 
 component DisplayView inherits Rectangle {
+    in property <image> texture <=> image.source;
+    out property <int> requested-texture-width: image.width/1phx;
+    out property <int> requested-texture-height: image.height/1phx;
     width: 62.5%;
-    height: self.width * (9.0/16.0);
+    height: self.width * (3.0/4.0);
+    VerticalLayout {
+        image := Image {
+            preferred-width: 640px;
+            preferred-height: 480px;
+            min-width: 64px;
+            min-height: 48px;
+            width: 100%;
+        }
+    }
 }
 
 component MemoryView inherits Rectangle {
@@ -245,6 +257,9 @@ component DisassemblyView inherits Rectangle {
 }
 
 export component MainWindow inherits Window {
+    in property <image> texture;
+    out property <int> requested-texture-width <=> displayview.requested-texture-width;
+    out property <int> requested-texture-height <=> displayview.requested-texture-height;
     in property <[string]> memory_view_data;
     in property <[string]> register_view_data;
     in property <[bool]> status_view_data;
@@ -262,12 +277,14 @@ export component MainWindow inherits Window {
     default-font-family: "Menlo";
     preferred-width: 1024px;
     min-width: 880px;
-    preferred-height: 576px;
+    preferred-height: 768px;
     min-height: 480px;
     title: "Z80 Emulator/Disassembler";
     HorizontalLayout {
         VerticalLayout {
-            DisplayView {}
+            displayview := DisplayView {
+                texture: texture;
+            }
             MemoryView  {
                 data: memory_view_data;
                 scroll_row: memory_scroll_row;
