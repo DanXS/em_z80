@@ -1,6 +1,5 @@
 
 use std::cmp::max;
-use std::sync::Mutex;
 use std::thread;
 use core::time::Duration;
 use std::time::Instant;
@@ -13,7 +12,7 @@ use crate::registers::Register;
 use crate::registers::Flag;
 use crate::registers::RegID;
 
-pub static mut REG : Mutex<Register> = Mutex::new(Register {
+pub static mut REG : Register = Register {
   af: 0x0000,
   bc: 0x0000,
   de: 0x0000,
@@ -28,7 +27,7 @@ pub static mut REG : Mutex<Register> = Mutex::new(Register {
   pc: 0x0000,
   ir: 0x0000,
   wz: 0x0000
-});
+};
 
 
 #[allow(dead_code)]
@@ -52,7 +51,7 @@ struct CpuState {
   pub interrupt_triggered: bool
 }
 
-static mut CPU_STATE : Mutex<CpuState> = Mutex::new(CpuState { 
+static mut CPU_STATE : CpuState = CpuState { 
   cycle_time: 286,
   active_cycles: 0,
   breakpoints: Vec::new(),
@@ -64,7 +63,7 @@ static mut CPU_STATE : Mutex<CpuState> = Mutex::new(CpuState {
   interrupt_iff2: false,
   is_cpu_halted: false,
   interrupt_triggered: false
-});
+};
 
 pub struct Cpu;
 
@@ -73,140 +72,140 @@ impl Cpu {
   #[inline]
   pub fn read_reg8(reg: RegID) -> u8 {
     unsafe {
-      REG.lock().unwrap().read8(reg)
+      REG.read8(reg)
     }
   }
 
   #[inline]
   pub fn read_reg16(reg: RegID) -> u16 {
     unsafe {
-      REG.lock().unwrap().read16(reg)
+      REG.read16(reg)
     }
   }
 
   #[inline]
   pub fn write_reg8(reg: RegID, val: u8) {
     unsafe {
-      REG.lock().unwrap().write8(reg, val);
+      REG.write8(reg, val);
     }
   }
 
   #[inline]
   pub fn write_reg16(reg: RegID, val: u16) {
     unsafe {
-      REG.lock().unwrap().write16(reg, val);
+      REG.write16(reg, val);
     }
   }
 
   #[inline]
   pub fn set_flag(flag: Flag) {
     unsafe {
-      REG.lock().unwrap().set_flag(flag);
+      REG.set_flag(flag);
     }
   }
 
   #[inline]
   pub fn clear_flag(flag: Flag) {
     unsafe {
-      REG.lock().unwrap().clear_flag(flag);
+      REG.clear_flag(flag);
     }
   }
 
   #[inline]
   pub fn is_flag_set(flag: Flag) -> bool {
     unsafe {
-      REG.lock().unwrap().is_flag_set(flag)
+      REG.is_flag_set(flag)
     }
   }
 
   #[inline]
   pub fn update_flags_for_inc(val : u8, inc_val : u8) {
     unsafe {
-      REG.lock().unwrap().update_flags_for_inc(val, inc_val);
+      REG.update_flags_for_inc(val, inc_val);
     }
   }
 
   #[inline]
   pub fn update_flags_for_dec(val : u8, dec_val : u8) {
     unsafe {
-      REG.lock().unwrap().update_flags_for_dec(val, dec_val);
+      REG.update_flags_for_dec(val, dec_val);
     }
   }
 
   #[inline]
   pub fn update_flags_for_addition8(val1 : u8, val2: u8, res: u16) {
     unsafe {
-      REG.lock().unwrap().update_flags_for_addition8(val1, val2, res);
+      REG.update_flags_for_addition8(val1, val2, res);
     }
   }
 
   #[inline]
   pub fn update_flags_for_subtraction8(val1 : u8, val2: u8, res: u16) {
     unsafe {
-      REG.lock().unwrap().update_flags_for_subtraction8(val1, val2, res);
+      REG.update_flags_for_subtraction8(val1, val2, res);
     }
   }
 
   #[inline]
   pub fn update_flags_for_addition16(val1: u16, res: u32) {
     unsafe {
-      REG.lock().unwrap().update_flags_for_addition16(val1, res);
+      REG.update_flags_for_addition16(val1, res);
     }
   }
 
   #[inline]
   pub fn update_flags_for_addition_with_carry16(val1: u16, val2: u16, res: u32) {
     unsafe {
-      REG.lock().unwrap().update_flags_for_addition_with_carry16(val1, val2, res);
+      REG.update_flags_for_addition_with_carry16(val1, val2, res);
     }
   }
 
   #[inline]
   pub fn update_flags_for_subtraction_with_carry16(val1 : u16, val2: u16, res : u32) {
     unsafe {
-      REG.lock().unwrap().update_flags_for_subtraction_with_carry16(val1, val2, res);
+      REG.update_flags_for_subtraction_with_carry16(val1, val2, res);
     }
   }
 
   #[inline]
   pub fn update_flags_for_negation8(val: u8, res: u16) {
     unsafe {
-      REG.lock().unwrap().update_flags_for_negation8(val, res);
+      REG.update_flags_for_negation8(val, res);
     }
   }
 
   #[inline]
   pub fn update_flags_for_logical_op(res: u8, set_h: bool) {
     unsafe {
-      REG.lock().unwrap().update_flags_for_logical_op(res, set_h);
+      REG.update_flags_for_logical_op(res, set_h);
     }
   }
 
   #[inline]
   pub fn update_flags_for_compare8(val1: u8, val2: u8) {
     unsafe {
-      REG.lock().unwrap().update_flags_for_compare8(val1, val2);
+      REG.update_flags_for_compare8(val1, val2);
     }
   }
 
   #[inline]
   pub fn update_flags_shift_left(val: u8, res: u8) {
     unsafe {
-      REG.lock().unwrap().update_flags_shift_left(val, res);
+      REG.update_flags_shift_left(val, res);
     }
   }
 
   #[inline]
   pub fn update_flags_shift_right(val: u8, res: u8) {
     unsafe {
-      REG.lock().unwrap().update_flags_shift_right(val, res);
+      REG.update_flags_shift_right(val, res);
     }
   }
 
   #[inline]
   pub fn get_register_view_string() -> String {
     unsafe {
-      REG.lock().unwrap().to_string()
+      REG.to_string()
     }
   }
 
@@ -279,75 +278,75 @@ impl Cpu {
 
   pub fn get_cycle_time() -> u64 {
     unsafe {
-      CPU_STATE.lock().unwrap().cycle_time
+      CPU_STATE.cycle_time
     }
   }
 
   pub fn set_cycle_time(ns: u64) {
     unsafe {
-      CPU_STATE.lock().unwrap().cycle_time = ns;
+      CPU_STATE.cycle_time = ns;
     }
   }
 
   pub fn get_acitve_cycles() -> u8 {
     unsafe {
-      CPU_STATE.lock().unwrap().active_cycles
+      CPU_STATE.active_cycles
     }
   }
 
   pub fn set_acitve_cycles(cycles: u8) {
     unsafe {
-      CPU_STATE.lock().unwrap().active_cycles = cycles;
+      CPU_STATE.active_cycles = cycles;
     }
   }
 
   pub fn enable_interrupts() {
     unsafe {
-      CPU_STATE.lock().unwrap().interrupt_iff1 = true;
-      CPU_STATE.lock().unwrap().interrupt_iff2 = true;
+      CPU_STATE.interrupt_iff1 = true;
+      CPU_STATE.interrupt_iff2 = true;
     }
   }
 
   pub fn disable_interrupts() {
     unsafe {
-      CPU_STATE.lock().unwrap().interrupt_iff1 = false;
-      CPU_STATE.lock().unwrap().interrupt_iff2 = false;
+      CPU_STATE.interrupt_iff1 = false;
+      CPU_STATE.interrupt_iff2 = false;
     }
   }
 
   pub fn halt_until_interrupt() {
     unsafe {
-      CPU_STATE.lock().unwrap().is_cpu_halted = true;
+      CPU_STATE.is_cpu_halted = true;
     }
   }
 
   pub fn return_from_interrupt() {
     unsafe {
       Self::pop_pc();
-      CPU_STATE.lock().unwrap().interrupt_triggered = false;
+      CPU_STATE.interrupt_triggered = false;
     }
   }
 
   pub fn return_from_non_maskable_interrupt() {
     unsafe {
       Self::pop_pc();
-      CPU_STATE.lock().unwrap().interrupt_iff1 = CPU_STATE.lock().unwrap().interrupt_iff2;
+      CPU_STATE.interrupt_iff1 = CPU_STATE.interrupt_iff2;
     }
   }
 
   pub fn toggle_breakpoint(addr: u16) {
     unsafe {
-      let mut bps = CPU_STATE.lock().unwrap().breakpoints.clone();
+      let mut bps = CPU_STATE.breakpoints.clone();
       match bps.binary_search(&addr) {
         Ok(pos) => {
             println!("Removing breakpoint {} at position {}", addr, pos);
             bps.remove(pos);
-            CPU_STATE.lock().unwrap().breakpoints = bps;
+            CPU_STATE.breakpoints = bps;
         },
         Err(pos) => {
             println!("Adding breakpoint {} at position {}", addr, pos);
             bps.insert(pos, addr.clone());
-            CPU_STATE.lock().unwrap().breakpoints = bps;
+            CPU_STATE.breakpoints = bps;
         }
       }
     }
@@ -355,13 +354,13 @@ impl Cpu {
 
   pub fn update_breakpoints_enabled(enabled : bool) {
     unsafe {
-      CPU_STATE.lock().unwrap().breakpoints_enabled = enabled;
+      CPU_STATE.breakpoints_enabled = enabled;
     }
   }
 
   pub fn has_breakpoint(addr: u16) -> bool {
     unsafe{
-      CPU_STATE.lock().unwrap().breakpoints.contains(&addr)
+      CPU_STATE.breakpoints.contains(&addr)
     }
   }
 
@@ -463,26 +462,17 @@ impl Cpu {
   }
 
   pub fn step() {
+    // The minimum number of cycles unless changed by the instruction itself
+    // For example, branching may take more cycles (cycles.0)
+    let now = Instant::now();
+
     // Fetch the instruction
     let (opcode, data, n) = Self::fetch(Self::get_pc());
     // Increment the program counter
     Self::set_pc((((Self::get_pc() as u32) + (opcode.byte_count as u32)) & 0xFFFF) as u16);
     // Run the instruction
     Self::run_inst(opcode.func, opcode, data, n);
-  }
 
-  fn run_inst(f: fn(&Instruction), opcode: &Opcode, data: [u8;2], len: usize) {
-    // The minimum number of cycles unless changed by the instruction itself
-    // For example, branching may take more cycles (cycles.0)
-    let now = Instant::now();
-    Self::set_acitve_cycles(opcode.cycles.1);
-    // Construct the instruction
-    let inst = Instruction{code: opcode.code, 
-      data: ((data[1] as u16) << 8) | (data[0] as u16), 
-      len: len, table: opcode.table,
-      cycles: opcode.cycles};
-    // Run the instruction
-    f(&inst);
     // Get the elapsed time the instruction took to execute
     let elapsed = now.elapsed().as_nanos() as u64;
     println!("Elapsed time without delay {}ns", elapsed);
@@ -493,70 +483,81 @@ impl Cpu {
     thread::sleep(Duration::from_nanos(sleep_time_ns as u64));
   }
 
+  fn run_inst(f: fn(&Instruction), opcode: &Opcode, data: [u8;2], len: usize) {
+    Self::set_acitve_cycles(opcode.cycles.1);
+    // Construct the instruction
+    let inst = Instruction{code: opcode.code, 
+      data: ((data[1] as u16) << 8) | (data[0] as u16), 
+      len: len, table: opcode.table,
+      cycles: opcode.cycles};
+    // Run the instruction
+    f(&inst);
+  }
+
   pub fn run() {
-    unsafe { CPU_STATE.lock().unwrap().is_running = true };
-    while unsafe { CPU_STATE.lock().unwrap().is_running } {
+    unsafe { CPU_STATE.is_running = true };
+    while unsafe { CPU_STATE.is_running } {
       unsafe {
-        if CPU_STATE.lock().unwrap().is_cpu_halted {
+        if CPU_STATE.is_cpu_halted {
           continue;
         }
       }
       let (text, _) = Self::disassemble(Self::get_pc());
       println!("Step:\n{:04X?}: {} ", Self::get_pc(), text);
       Self::step();
-      if unsafe { CPU_STATE.lock().unwrap().breakpoints_enabled } {
-        if unsafe { CPU_STATE.lock().unwrap().breakpoints.contains(&Self::get_pc()) } {
+      if unsafe { CPU_STATE.breakpoints_enabled } {
+        if unsafe { CPU_STATE.breakpoints.contains(&Self::get_pc()) } {
           println!("Hit breakpoint at: {:04X?}", &Self::get_pc());
           break;
         }
       }
       unsafe {
         // Handle interrupts
-        if  CPU_STATE.lock().unwrap().interrupt_triggered  {
-          if matches!(CPU_STATE.lock().unwrap().interrupt_mode, InterruptMode::One) {
-            let isr_addr = CPU_STATE.lock().unwrap().databus_val as u16;
+        if  CPU_STATE.interrupt_triggered  {
+          if matches!(CPU_STATE.interrupt_mode, InterruptMode::One) {
+            let isr_addr = CPU_STATE.databus_val as u16;
             // Save the program counter to the stack
             Self::push_pc();
             Self::set_pc(isr_addr);
             println!("Servicing Interrupt in Mode One");
-            CPU_STATE.lock().unwrap().is_cpu_halted = false;
+            CPU_STATE.is_cpu_halted = false;
           }
-          CPU_STATE.lock().unwrap().interrupt_iff1 = false;
-          CPU_STATE.lock().unwrap().interrupt_triggered = false;
+          CPU_STATE.interrupt_iff1 = false;
+          CPU_STATE.interrupt_triggered = false;
         }
       }
     }
-    unsafe { CPU_STATE.lock().unwrap().is_running = false };
+    unsafe { CPU_STATE.is_running = false };
   }
 
   pub fn stop() {
-    unsafe { CPU_STATE.lock().unwrap().is_running = false };
+    unsafe { CPU_STATE.is_running = false };
   }
 
   pub fn trigger_interrupt(db_val : u8) {
     unsafe {
-      if !CPU_STATE.lock().unwrap().interrupt_iff1 {
+      if !CPU_STATE.interrupt_iff1 {
           // Don't accept interrupts
         return;
       }
       else {
         // Notify the running thread that an interrupt has been triggered
-        CPU_STATE.lock().unwrap().databus_val = db_val;
-        CPU_STATE.lock().unwrap().interrupt_triggered = true;
+        CPU_STATE.databus_val = db_val;
+        CPU_STATE.interrupt_triggered = true;
       }
     }
   }
 
   pub fn trigger_non_maskable_interrupt(db_val : u8) {
     unsafe {
-      if !CPU_STATE.lock().unwrap().interrupt_iff2 {
+      if !CPU_STATE.interrupt_iff2 {
           // Don't accept non maskable interrupts
         return;
       }
       else {
         // Notify the running thread that an interrupt has been triggered
-        CPU_STATE.lock().unwrap().databus_val = db_val;
-        CPU_STATE.lock().unwrap().interrupt_triggered = true;
+        CPU_STATE.databus_val = db_val;
+        CPU_STATE.interrupt_triggered = true;
       }
     }
   }

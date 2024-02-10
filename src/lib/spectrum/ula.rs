@@ -1,4 +1,3 @@
-use std::sync::Mutex;
 use std::{sync::mpsc::channel, thread, time::Duration};
 
 const SCREEN_WIDTH : usize =256;
@@ -8,7 +7,7 @@ const ATTRS_OFFSET : usize = 0x1800;
 const BUFFER_SIZE : usize = 0x1B00;
 pub const SCREEN_SIZE_BYTES : usize = 4*SCREEN_WIDTH*SCREEN_HEIGHT;
 
-static mut OUTPUT_RGBA: Mutex<[u8; SCREEN_SIZE_BYTES]> = Mutex::new([0; SCREEN_SIZE_BYTES]);
+static mut OUTPUT_RGBA: [u8; SCREEN_SIZE_BYTES] = [0; SCREEN_SIZE_BYTES];
 
 pub struct Ula;
 
@@ -67,7 +66,6 @@ impl Ula {
   pub fn convert_screen_buffer_rgba(src_buffer : &[u8]) {
     unsafe {
       let mut l = 0;
-      let mut output_rgba = OUTPUT_RGBA.lock().unwrap();
       assert_eq!(src_buffer.len(), BUFFER_SIZE);
       for j in 0..SCREEN_HEIGHT {
         for i in 0..SCREEN_WIDTH {
@@ -82,18 +80,18 @@ impl Ula {
           if bit {
             let palete_index = ((src_buffer[src_attr_offset] & 0x07) |
                                        ((src_buffer[src_attr_offset] & 0x40) >> 3)) as usize;
-            output_rgba[l] = ((COLOUR_PALETTE[palete_index] >> 24) & 0xFF) as u8;
-            output_rgba[l+1] = ((COLOUR_PALETTE[palete_index] >> 16) & 0xFF) as u8;
-            output_rgba[l+2] = ((COLOUR_PALETTE[palete_index] >> 8) & 0xFF) as u8;
-            output_rgba[l+3] = (COLOUR_PALETTE[palete_index] & 0xFF) as u8;
+            OUTPUT_RGBA[l] = ((COLOUR_PALETTE[palete_index] >> 24) & 0xFF) as u8;
+            OUTPUT_RGBA[l+1] = ((COLOUR_PALETTE[palete_index] >> 16) & 0xFF) as u8;
+            OUTPUT_RGBA[l+2] = ((COLOUR_PALETTE[palete_index] >> 8) & 0xFF) as u8;
+            OUTPUT_RGBA[l+3] = (COLOUR_PALETTE[palete_index] & 0xFF) as u8;
           }
           else {
             let palete_index = (((src_buffer[src_attr_offset] >> 3) & 0x07) |
                                        ((src_buffer[src_attr_offset] & 0x40) >> 3)) as usize;
-            output_rgba[l] = ((COLOUR_PALETTE[palete_index] >> 24) & 0xFF) as u8;
-            output_rgba[l+1] = ((COLOUR_PALETTE[palete_index] >> 16) & 0xFF) as u8;
-            output_rgba[l+2] = ((COLOUR_PALETTE[palete_index] >> 8) & 0xFF) as u8;
-            output_rgba[l+3] = (COLOUR_PALETTE[palete_index] & 0xFF) as u8;
+            OUTPUT_RGBA[l] = ((COLOUR_PALETTE[palete_index] >> 24) & 0xFF) as u8;
+            OUTPUT_RGBA[l+1] = ((COLOUR_PALETTE[palete_index] >> 16) & 0xFF) as u8;
+            OUTPUT_RGBA[l+2] = ((COLOUR_PALETTE[palete_index] >> 8) & 0xFF) as u8;
+            OUTPUT_RGBA[l+3] = (COLOUR_PALETTE[palete_index] & 0xFF) as u8;
           }
           l = l + 4;
         }
@@ -103,7 +101,7 @@ impl Ula {
 
   pub fn get_rgba_buffer() -> Box<[u8;SCREEN_SIZE_BYTES]> {
     unsafe {
-      let output_rgba = Box::new(OUTPUT_RGBA.lock().unwrap().clone());
+      let output_rgba = Box::new(OUTPUT_RGBA.clone());
       return output_rgba;
     }
   }

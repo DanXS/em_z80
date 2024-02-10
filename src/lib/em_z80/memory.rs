@@ -1,13 +1,12 @@
 use std::fmt;
 use std::io::prelude::*;
 use std::fs::File;
-use std::sync::Mutex;
 use std::io::ErrorKind;
 
 pub const MEM_SIZE : u32 = 0x10000;
 pub const ROM_SIZE : u32 = 0x4000;
 
-static mut BYTES : Mutex<[u8; MEM_SIZE as usize]> = Mutex::new([0; MEM_SIZE as usize]);
+static mut BYTES : [u8; MEM_SIZE as usize] = [0; MEM_SIZE as usize];
 
 pub struct Memory;
 
@@ -21,7 +20,7 @@ impl fmt::Display for Memory {
       };
       for j in 0..16 {
         unsafe {
-          let byte =  BYTES.lock().unwrap()[(i+j) as usize];
+          let byte =  BYTES[(i+j) as usize];
           match write!(f, "{:02X?} ", byte) {
             Ok(res) => res,
             Err(e) => return Err(e),
@@ -30,7 +29,7 @@ impl fmt::Display for Memory {
       }
       for j in 0..16 {
         unsafe {
-          let byte =  BYTES.lock().unwrap()[(i+j) as usize];
+          let byte =  BYTES[(i+j) as usize];
           let mut chr = '.';
           if byte.is_ascii() && !byte.is_ascii_control() {
             chr = byte as char;
@@ -54,7 +53,7 @@ impl Memory {
 
   pub fn read8(address : u16) -> u8 {
     unsafe {
-      BYTES.lock().unwrap()[address as usize]
+      BYTES[address as usize]
     }
   }
 
@@ -74,7 +73,7 @@ impl Memory {
     unsafe {
       // Only write to RAM
       if (address as u32) >= ROM_SIZE {
-        BYTES.lock().unwrap()[address as usize] = val;
+        BYTES[address as usize] = val;
       }
     }
   }
@@ -100,7 +99,7 @@ impl Memory {
     }
     else {
       unsafe {
-        f.read(&mut (BYTES.lock().unwrap()[start_addr..]))?;
+        f.read(&mut (BYTES[start_addr..]))?;
       }
     }
     Ok(())
@@ -110,7 +109,7 @@ impl Memory {
     assert!(start_addr < end_addr);
     assert!(end_addr < MEM_SIZE as usize);
     unsafe {
-      (BYTES.lock().unwrap()[start_addr..end_addr]).clone_into(buffer);
+      (BYTES[start_addr..end_addr]).clone_into(buffer);
     }
   }
 }

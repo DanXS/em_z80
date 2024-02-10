@@ -25,12 +25,12 @@ pub fn get_rom_size() -> u32 {
 
 // Load a binary image file into memory starting at a given start address
 pub fn load_bin(filename: &str, start_addr: usize) -> io::Result<()> {
-  Memory::load_bin(filename, start_addr)
-}
-
-// Get a reference to the memory
-pub fn get_memory_ref() -> &'static Memory {
-  &Memory
+  unsafe {
+    let restore_state = critical_section::acquire();
+    let res = Memory::load_bin(filename, start_addr);
+    critical_section::release(restore_state);
+    return res;
+  }
 }
 
 // Get a string representing entire memory view
@@ -40,17 +40,26 @@ pub fn get_memory_view_string() -> String {
 
 // Set the CPU's frequency to emulate at. Defaults to 3.5Mhz
 pub fn set_cpu_frequency(mhz: f32) {
-  Cpu::set_cpu_frequency(mhz);
+  unsafe {
+    let restore_state = critical_section::acquire();
+    Cpu::set_cpu_frequency(mhz);
+    critical_section::release(restore_state);
+  }
 }
 
 // Get the program counter's current address
 pub fn get_pc() -> u16 {
-  Cpu::get_pc()
+  let res = Cpu::get_pc();
+  return res;
 }
 
 // Set the program counter to a particular address
 pub fn set_pc(addr: u16) {
-  Cpu::set_pc(addr);
+  unsafe {
+    let restore_state = critical_section::acquire();
+    Cpu::set_pc(addr);
+    critical_section::release(restore_state);
+  }
 }
 
 // Get a 8 bit register value
@@ -60,7 +69,11 @@ pub fn get_register8(reg: RegID) -> u8 {
 
 // Set a 8 bit register to a specified value
 pub fn set_register8(reg: RegID, val: u8) {
-  Cpu::set_register8(reg, val);
+  unsafe {
+    let restore_state = critical_section::acquire();
+    Cpu::set_register8(reg, val);
+    critical_section::release(restore_state);
+  }
 }
 
 // Get a 16 bit register value
@@ -70,38 +83,50 @@ pub fn get_register16(reg: RegID) -> u16 {
 
 // Set a 16 bit register to a specified value
 pub fn set_register16(reg: RegID, val: u16) {
-  Cpu::set_register16(reg, val);
+  unsafe {
+    let restore_state = critical_section::acquire();
+    Cpu::set_register16(reg, val);
+    critical_section::release(restore_state);
+  }
 }
 
 pub fn get_register_from_str(reg_str: &str) -> RegID {
-  Cpu::get_register_from_str(reg_str)
+    Cpu::get_register_from_str(reg_str)
 }
 
 // Set the status flag
 // Flag names should be one of "C", "N", "P/V", "H", "Z" or "S"
 pub fn set_status_flag(flag: &str) {
-  match flag {
-    "C" => Cpu::set_status_flag(Flag::C),
-    "N" => Cpu::set_status_flag(Flag::N),
-    "P/V" => Cpu::set_status_flag(Flag::PV),
-    "H" => Cpu::set_status_flag(Flag::H),
-    "Z" => Cpu::set_status_flag(Flag::Z),
-    "S" => Cpu::set_status_flag(Flag::S),
-    _ => panic!("Status flag does not exist!")
+  unsafe {
+    let restore_state = critical_section::acquire();
+    match flag {
+      "C" => Cpu::set_status_flag(Flag::C),
+      "N" => Cpu::set_status_flag(Flag::N),
+      "P/V" => Cpu::set_status_flag(Flag::PV),
+      "H" => Cpu::set_status_flag(Flag::H),
+      "Z" => Cpu::set_status_flag(Flag::Z),
+      "S" => Cpu::set_status_flag(Flag::S),
+      _ => panic!("Status flag does not exist!")
+    }
+    critical_section::release(restore_state);
   }
 }
 
 // Clear the status flag
 // Flag names should be one of "C", "N", "P/V", "H", "Z" or "S"
 pub fn clear_status_flag(flag: &str) {
-  match flag {
-    "C" => Cpu::clear_status_flag(Flag::C),
-    "N" => Cpu::clear_status_flag(Flag::N),
-    "P/V" => Cpu::clear_status_flag(Flag::PV),
-    "H" => Cpu::clear_status_flag(Flag::H),
-    "Z" => Cpu::clear_status_flag(Flag::Z),
-    "S" => Cpu::clear_status_flag(Flag::S),
-    _ => panic!("Status flag does not exist!")
+  unsafe {
+    let restore_state = critical_section::acquire();
+    match flag {
+      "C" => Cpu::clear_status_flag(Flag::C),
+      "N" => Cpu::clear_status_flag(Flag::N),
+      "P/V" => Cpu::clear_status_flag(Flag::PV),
+      "H" => Cpu::clear_status_flag(Flag::H),
+      "Z" => Cpu::clear_status_flag(Flag::Z),
+      "S" => Cpu::clear_status_flag(Flag::S),
+      _ => panic!("Status flag does not exist!")
+    }
+    critical_section::release(restore_state);
   }
 }
 
@@ -132,19 +157,18 @@ pub fn run() {
 
 // Stop the running task
 pub fn stop() {
-  Cpu::stop();
+  Cpu::stop();  
 }
 
 // Get a string representing registers
 pub fn get_register_view_string() -> String {
-  Cpu::get_register_view_string()
+    Cpu::get_register_view_string()
 }
 
 // Dissassmble a given address, returns the dissabled string and the number of bytes
 // used to encode the instruction
 pub fn disassemble_addr(addr: u16) -> (String, u8) {
-  let result = Cpu::disassemble(addr);
-  return result;
+    Cpu::disassemble(addr)
 }
 
 // Toggle a breakpoint at a given address, if a breakpoint already exists it will be removed
@@ -160,7 +184,7 @@ pub fn has_breakpoint(addr: u16) -> bool {
 
 // Enable or disable breakpoints
 pub fn update_breakpoints_enabled(enabled: bool) {
-  Cpu::update_breakpoints_enabled(enabled);
+  Cpu::update_breakpoints_enabled(enabled)
 }
 
 // Trigger an interrupt with a given value on the databus
