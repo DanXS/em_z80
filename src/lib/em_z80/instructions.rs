@@ -1,7 +1,7 @@
 use crate::memory::Memory;
 use crate::opcodes::TableID;
 use crate::registers::Flag;
-use crate::cpu::Cpu;
+use crate::cpu::{Cpu, InterruptMode};
 use crate::registers::Register;
 use crate::registers::RegID;
 use crate::util::*;
@@ -2523,7 +2523,26 @@ impl InstTrait for Instruction {
   }
 
   fn im(&self) {
-    report_unknown("IM");
+    match self.table {
+      TableID::MISC => {
+        if self.code == 0x46 {
+          // IM 0
+          Cpu::set_interrupt_mode(InterruptMode::Zero);
+        }
+        else if self.code == 0x56 {
+          // IM 1
+          Cpu::set_interrupt_mode(InterruptMode::One);
+        }
+        else if self.code == 0x5E {
+          // IM 2
+          Cpu::set_interrupt_mode(InterruptMode::Two);
+        }
+        else {
+          report_unknown("IM");
+        }
+      },
+       _ => report_unknown("IM")
+    }
   }
 
   fn reti(&self) {

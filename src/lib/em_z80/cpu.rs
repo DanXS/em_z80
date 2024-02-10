@@ -31,7 +31,7 @@ pub static mut REG : Register = Register {
 
 
 #[allow(dead_code)]
-enum InterruptMode {
+pub enum InterruptMode {
   Zero,
   One,
   Two
@@ -314,6 +314,12 @@ impl Cpu {
     }
   }
 
+  pub fn set_interrupt_mode(mode: InterruptMode) {
+    unsafe {
+      CPU_STATE.interrupt_mode = mode;
+    }
+  }
+
   pub fn halt_until_interrupt() {
     unsafe {
       CPU_STATE.is_cpu_halted = true;
@@ -405,6 +411,8 @@ impl Cpu {
       // Read the first opcode byte
       let code = Memory::read8(address);
       let mut opcode = &opcodes::MAIN_OPCODES[code as usize];
+      let mut is_index_bit_table = false;
+      let mut data: [u8;2] = [0,0];
       // Increment address
       address = inc_u16_wrap(address);
       let mut inst_len : usize = 1;
@@ -431,6 +439,10 @@ impl Cpu {
         inst_len = 2;
         if opcode.instruction == "IX_BIT" {
           // It's a three byte opcode from IX_BIT table
+          // Here the data comes before the opcode
+          is_index_bit_table = true;
+          data[0] = Memory::read8(address);
+          address = inc_u16_wrap(address);
           let code = Memory::read8(address);
           opcode = &opcodes::IX_BIT_OPCODES[code as usize];
           address = inc_u16_wrap(address);
@@ -445,6 +457,10 @@ impl Cpu {
         inst_len = 2;
         if opcode.instruction == "IY_BIT" {
           // It's a three byte opcode from IY_BIT table
+          // Here the data comes before the opcode
+          is_index_bit_table = true;
+          data[0] = Memory::read8(address);
+          address = inc_u16_wrap(address);
           let code = Memory::read8(address);
           opcode = &opcodes::IY_BIT_OPCODES[code as usize];
           address = inc_u16_wrap(address);
@@ -452,11 +468,14 @@ impl Cpu {
         }
       }
       // Read the remaining bytes of data for the operand's
-      let mut data: [u8;2] = [0,0];
       let n = (opcode.byte_count as usize) - inst_len;
-      for i in 0..n {
-        data[i] = Memory::read8(address);
-        address = inc_u16_wrap(address);
+      if !is_index_bit_table {
+        // IX_BIT and IY_BIT tables have data before opcode so ignore those cases
+        // as we already have the data, otherwise read the remaining operand data
+        for i in 0..n {
+          data[i] = Memory::read8(address);
+          address = inc_u16_wrap(address);
+        }
       }
       (opcode, data, n)
   }
@@ -521,6 +540,9 @@ impl Cpu {
             Self::set_pc(isr_addr);
             println!("Servicing Interrupt in Mode One");
             CPU_STATE.is_cpu_halted = false;
+          }
+          else {
+            println!("Interrupt mode not implemented");
           }
           CPU_STATE.interrupt_iff1 = false;
           CPU_STATE.interrupt_triggered = false;

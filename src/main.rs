@@ -91,7 +91,7 @@ impl GLTextureFBO {
         let old_unpack_skip_rows = gl.get_parameter_i32(glow::UNPACK_SKIP_ROWS);
 
         gl.pixel_store_i32(glow::UNPACK_ALIGNMENT, 1);
-        gl.tex_parameter_i32(glow::TEXTURE_2D, glow::TEXTURE_MIN_FILTER, glow::NEAREST as i32);
+        gl.tex_parameter_i32(glow::TEXTURE_2D, glow::TEXTURE_MIN_FILTER, glow::LINEAR as i32);
         gl.tex_parameter_i32(glow::TEXTURE_2D, glow::TEXTURE_MAG_FILTER, glow::NEAREST as i32);
         gl.tex_parameter_i32(glow::TEXTURE_2D, glow::TEXTURE_WRAP_S, glow::CLAMP_TO_EDGE as i32);
         gl.tex_parameter_i32(glow::TEXTURE_2D, glow::TEXTURE_WRAP_T, glow::CLAMP_TO_EDGE as i32);
@@ -483,7 +483,7 @@ fn main() {
                 .unwrap_or_else(|v: Vec<u8>| panic!("Expected a Vec of length {} but it was {}", 0x1B00, v.len()));
             // Convert the RGBA
             convert_screen_buffer_rgba(&byte_buffer);
-            // Trigger Verticle blanking gap interrupt
+            // Trigger vertical blanking gap interrupt
             trigger_interrupt(data);
         }
     });
