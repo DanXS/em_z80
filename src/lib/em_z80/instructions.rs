@@ -2424,28 +2424,263 @@ impl InstTrait for Instruction {
     }
   }
 
-  fn bit(&self) {
-    report_unknown("BIT");
-  }
-
-  fn res(&self) {
-    report_unknown("RES");
-  }
-
-  fn set(&self) {
-    report_unknown("SET");
-  }
-
+  // SCF Instruction
   fn scf(&self) {
-    report_unknown("SCF");
+    match self.table {
+      TableID::MAIN => {
+        if self.code == 0x37 {
+          Cpu::set_flag(Flag::C);
+          Cpu::clear_flag(Flag::H);
+          Cpu::clear_flag(Flag::N);
+        }
+        else {
+          report_unknown("SCF");
+        }
+      },
+      _ => report_unknown("SCF")
+    }
   }
 
+  // CCF Instruction
   fn ccf(&self) {
-    report_unknown("CCF");
+    match self.table {
+      TableID::MAIN => {
+        if self.code == 0x3F {
+          if Cpu::is_flag_set(Flag::C) {
+            Cpu::set_flag(Flag::H);
+            Cpu::clear_flag(Flag::C);
+          }
+          else {
+            Cpu::clear_flag(Flag::H);
+            Cpu::set_flag(Flag::C);
+          }
+          Cpu::clear_flag(Flag::N);
+        }
+        else {
+          report_unknown("CCF");
+        }
+      },
+      _ => report_unknown("CCF")
+    }
   }
 
+  // BIT Instruction
+  fn bit(&self) {
+    match self.table {
+      TableID::BIT => {
+        if self.code & 0xC0 == 0x40 {
+          let reg_map = [RegID::B, RegID::C, RegID::D, RegID::E, RegID::H, RegID::L, RegID::HL, RegID::A];
+          let r = self.code & 0x03;
+          let b = (self.code & 0x38) >> 3;
+          let reg = reg_map[r as usize];
+          if matches!(reg,RegID::HL) {
+            // BIT b, (HL)
+            let addr = Cpu::read_reg16(RegID::HL);
+            let val = Memory::read8(addr);
+            if (val >> b) & 0x01 == 0x01 {
+              Cpu::clear_flag(Flag::Z);
+            }
+            else {
+              Cpu::set_flag(Flag::Z);
+            }
+            Cpu::set_flag(Flag::H);
+            Cpu::clear_flag(Flag::N);
+          }
+          else {
+            // BIT b, r
+            let val = Cpu::read_reg8(reg);
+            if (val >> b) & 0x01 == 0x01 {
+              Cpu::clear_flag(Flag::Z);
+            }
+            else {
+              Cpu::set_flag(Flag::Z);
+            }
+            Cpu::set_flag(Flag::H);
+            Cpu::clear_flag(Flag::N);
+          }
+        }
+        else {
+          report_unknown("BIT");
+        }
+      },
+      TableID::IXBIT => {
+        // BIT b, (IX+d)
+        if self.code & 0xC7 == 0x46 {
+          let addr = Cpu::read_reg16(RegID::IX);
+          let src_addr = calc_address_with_offset(addr, self.data as u8);
+          let val = Memory::read8(src_addr);
+          let b = (self.code & 0x38) >> 3;
+          if (val >> b) & 0x01 == 0x01 {
+            Cpu::clear_flag(Flag::Z);
+          }
+          else {
+            Cpu::set_flag(Flag::Z);
+          }
+          Cpu::set_flag(Flag::H);
+          Cpu::clear_flag(Flag::N);
+        }
+        else {
+          report_unknown("BIT");
+        }
+      },
+      TableID::IYBIT => {
+        // BIT b, (IY+d)
+        if self.code & 0xC7 == 0x46 {
+          let addr = Cpu::read_reg16(RegID::IY);
+          let src_addr = calc_address_with_offset(addr, self.data as u8);
+          let val = Memory::read8(src_addr);
+          let b = (self.code & 0x38) >> 3;
+          if (val >> b) & 0x01 == 0x01 {
+            Cpu::clear_flag(Flag::Z);
+          }
+          else {
+            Cpu::set_flag(Flag::Z);
+          }
+          Cpu::set_flag(Flag::H);
+          Cpu::clear_flag(Flag::N);
+        }
+        else {
+          report_unknown("BIT");
+        }
+      },     
+      _ => report_unknown("BIT")
+    }
+  }
+
+  // SET Instruction
+  fn set(&self) {
+    match self.table {
+      TableID::BIT => {
+        if self.code & 0xC0 == 0xC0 {
+          let reg_map = [RegID::B, RegID::C, RegID::D, RegID::E, RegID::H, RegID::L, RegID::HL, RegID::A];
+          let r = self.code & 0x03;
+          let b = (self.code & 0x38) >> 3;
+          let reg = reg_map[r as usize];
+          if matches!(reg,RegID::HL) {
+            // SET b, (HL)
+            let addr = Cpu::read_reg16(RegID::HL);
+            let mut val = Memory::read8(addr);
+            val = val | (0x01 << b);
+            Memory::write8(addr, val);
+          }
+          else {
+            // SET b, r
+            let mut val = Cpu::read_reg8(reg);
+            val = val | (0x01 << b);
+            Cpu::write_reg8(reg, val);
+          }
+        }
+        else {
+          report_unknown("SET");
+        }
+      },
+      TableID::IXBIT => {
+        if self.code & 0xC7 == 0xC6 {
+          // SET b, (IX+d)
+          let addr = Cpu::read_reg16(RegID::IX);
+          let dst_addr = calc_address_with_offset(addr, self.data as u8);
+          let mut val = Memory::read8(dst_addr);
+          let b = (self.code & 0x38) >> 3;
+          val = val | (0x01 << b);
+          Memory::write8(dst_addr, val);
+        }
+        else {
+          report_unknown("SET");
+        }
+      },
+      TableID::IYBIT => {
+        if self.code & 0xC7 == 0xC6 {
+          // SET b, (IY+d)
+          let addr = Cpu::read_reg16(RegID::IY);
+          let dst_addr = calc_address_with_offset(addr, self.data as u8);
+          let mut val = Memory::read8(dst_addr);
+          let b = (self.code & 0x38) >> 3;
+          val = val | (0x01 << b);
+          Memory::write8(dst_addr, val);
+        }
+        else {
+          report_unknown("SET");
+        }
+      },     
+      _ => report_unknown("SET")
+    }
+  }
+
+  // RES Instruction
+  fn res(&self) {
+    match self.table {
+      TableID::BIT => {
+        if self.code & 0xC0 == 0x80 {
+          let reg_map = [RegID::B, RegID::C, RegID::D, RegID::E, RegID::H, RegID::L, RegID::HL, RegID::A];
+          let r = self.code & 0x03;
+          let b = (self.code & 0x38) >> 3;
+          let reg = reg_map[r as usize];
+          if matches!(reg,RegID::HL) {
+            // RES b, (HL)
+            let addr = Cpu::read_reg16(RegID::HL);
+            let mut val = Memory::read8(addr);
+            val = val & !(0x01 << b);
+            Memory::write8(addr, val);
+          }
+          else {
+            // RES b, r
+            let mut val = Cpu::read_reg8(reg);
+            val = val | (0x01 << b);
+            Cpu::write_reg8(reg, val);
+          }
+        }
+        else {
+          report_unknown("RES");
+        }
+      },
+      TableID::IXBIT => {
+        if self.code & 0xC7 == 0x86 {
+          // RES b, (IX+d)
+          let addr = Cpu::read_reg16(RegID::IX);
+          let dst_addr = calc_address_with_offset(addr, self.data as u8);
+          let mut val = Memory::read8(dst_addr);
+          let b = (self.code & 0x38) >> 3;
+          val = val & !(0x01 << b);
+          Memory::write8(dst_addr, val);
+        }
+        else {
+          report_unknown("RES");
+        }
+      },
+      TableID::IYBIT => {
+        if self.code & 0xC7 == 0x86 {
+          // RES b, (IY+d)
+          let addr = Cpu::read_reg16(RegID::IY);
+          let dst_addr = calc_address_with_offset(addr, self.data as u8);
+          let mut val = Memory::read8(dst_addr);
+          let b = (self.code & 0x38) >> 3;
+          val = val & !(0x01 << b);
+          Memory::write8(dst_addr, val);
+        }
+        else {
+          report_unknown("RES");
+        }
+      },     
+      _ => report_unknown("RES")
+    }
+  }
+
+  // RST Instruction
   fn rst(&self) {
-    report_unknown("RST");
+    match self.table {
+      TableID::MAIN => {
+        if self.code & 0xC7 == 0xC7 {
+          Cpu::push_pc();
+          let val = self.code & 0x38;
+          let pc = 0x0000 + (val as u16);
+          Cpu::write_reg16(RegID::PC, pc);
+        }
+        else {
+          report_unknown("RST");
+        }
+      },
+      _ => report_unknown("RST")
+    }
   }
 
   fn otir(&self) {
