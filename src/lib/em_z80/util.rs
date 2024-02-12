@@ -11,12 +11,12 @@ pub fn inc_u16_wrap(val: u16) -> u16 {
 
 #[inline(always)]
 pub fn dec_u8_wrap(val: u8) -> u8 {
-  ((((val as u16) as i16) - 1) & 0xFF) as u8
+  (((val as i16) - 1) & 0xFF) as u8
 }
 
 #[inline(always)]
 pub fn dec_u16_wrap(val: u16) -> u16 {
-  ((((val as u32) as i32) - 1) & 0xFFFF) as u16
+  (((val as i32) - 1) & 0xFFFF) as u16
 }
 
 #[inline(always)]

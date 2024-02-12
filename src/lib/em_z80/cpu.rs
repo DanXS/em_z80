@@ -494,12 +494,10 @@ impl Cpu {
 
     // Get the elapsed time the instruction took to execute
     let elapsed = now.elapsed().as_nanos() as u64;
-    println!("Elapsed time without delay {}ns", elapsed);
     // Simulate the time it takes for the instruciton to run
     let delay_ns = Self::get_cycle_time()*(Self::get_acitve_cycles() as u64);
-    println!("Cycles to execute: {}, delay {}ns", Self::get_acitve_cycles(), delay_ns);
     let sleep_time_ns = max(0, (delay_ns as i64) - (elapsed as i64));
-    thread::sleep(Duration::from_nanos(sleep_time_ns as u64));
+    //thread::sleep(Duration::from_nanos(sleep_time_ns as u64));
   }
 
   fn run_inst(f: fn(&Instruction), opcode: &Opcode, data: [u8;2], len: usize) {
@@ -521,8 +519,6 @@ impl Cpu {
           continue;
         }
       }
-      let (text, _) = Self::disassemble(Self::get_pc());
-      println!("Step:\n{:04X?}: {} ", Self::get_pc(), text);
       Self::step();
       if unsafe { CPU_STATE.breakpoints_enabled } {
         if unsafe { CPU_STATE.breakpoints.contains(&Self::get_pc()) } {
@@ -532,20 +528,20 @@ impl Cpu {
       }
       unsafe {
         // Handle interrupts
-        if  CPU_STATE.interrupt_triggered  {
-          if matches!(CPU_STATE.interrupt_mode, InterruptMode::One) {
-            let isr_addr = CPU_STATE.databus_val as u16;
-            // Save the program counter to the stack
-            Self::push_pc();
-            Self::set_pc(isr_addr);
-            println!("Servicing Interrupt in Mode One");
-            CPU_STATE.is_cpu_halted = false;
+        if  CPU_STATE.interrupt_triggered {
+          match CPU_STATE.interrupt_mode {
+            InterruptMode::One => {
+              let isr_addr = CPU_STATE.databus_val as u16;
+              // Save the program counter to the stack
+              Self::push_pc();
+              Self::set_pc(isr_addr);
+              println!("Servicing Interrupt in Mode One");
+              CPU_STATE.is_cpu_halted = false;
+              CPU_STATE.interrupt_iff1 = false;
+              CPU_STATE.interrupt_triggered = false;
+            },
+            _ => println!("Interrupt mode not implemented")
           }
-          else {
-            println!("Interrupt mode not implemented");
-          }
-          CPU_STATE.interrupt_iff1 = false;
-          CPU_STATE.interrupt_triggered = false;
         }
       }
     }

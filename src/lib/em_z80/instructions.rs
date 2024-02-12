@@ -635,7 +635,7 @@ impl InstTrait for Instruction {
       TableID::MAIN => {
         if self.code & 0xCF == 0xC5 {
           // PUSH rr
-          let reg_map = [RegID::BC, RegID::DE, RegID::HL, RegID::SP];
+          let reg_map = [RegID::BC, RegID::DE, RegID::HL, RegID::AF];
           let src = ((self.code & 0x30) >> 4) as usize;
           let src_reg = reg_map[src];
           let val = Cpu::read_reg16(src_reg);
@@ -684,7 +684,7 @@ impl InstTrait for Instruction {
       TableID::MAIN => {
         if self.code & 0xCF == 0xC1 {
           // POP rr
-          let reg_map = [RegID::BC, RegID::DE, RegID::HL, RegID::SP];
+          let reg_map = [RegID::BC, RegID::DE, RegID::HL, RegID::AF];
           let rr = ((self.code & 0x30) >> 4) as usize;
           let dst_reg = reg_map[rr];
           let mut addr = Cpu::read_reg16(RegID::SP);
@@ -1435,7 +1435,7 @@ impl InstTrait for Instruction {
           let val = Cpu::read_reg8(RegID::A);
           let mut res = val << 1;
           if Cpu::is_flag_set(Flag::C) {
-            res = res & 0x01;
+            res = res | 0x01;
           }
           Cpu::write_reg8(RegID::A, res);
           Cpu::update_flags_shift_left(val, res);
@@ -1456,7 +1456,7 @@ impl InstTrait for Instruction {
           let val = Cpu::read_reg8(RegID::A);
           let mut res = val >> 1;
           if Cpu::is_flag_set(Flag::C) {
-            res = res & 0x80;
+            res = res | 0x80;
           }
           Cpu::write_reg8(RegID::A, res);
           Cpu::update_flags_shift_right(val, res);
@@ -1477,7 +1477,7 @@ impl InstTrait for Instruction {
           let val = Cpu::read_reg8(RegID::A);
           let mut res = val << 1;
           if val & 0x80 == 0x80 {
-            res = res & 0x01;
+            res = res | 0x01;
           }
           Cpu::write_reg8(RegID::A, res);
           Cpu::update_flags_shift_left(val, res);
@@ -1498,7 +1498,7 @@ impl InstTrait for Instruction {
           let val = Cpu::read_reg8(RegID::A);
           let mut res = val >> 1;
           if val & 0x01 == 0x01 {
-            res = res & 0x80;
+            res = res | 0x80;
           }
           Cpu::write_reg8(RegID::A, res);
           Cpu::update_flags_shift_right(val, res);
@@ -1525,7 +1525,7 @@ impl InstTrait for Instruction {
             let val = Memory::read8(addr);
             let mut res = val << 1;
             if Cpu::is_flag_set(Flag::C) {
-              res = res & 0x01;
+              res = res | 0x01;
             }
             Memory::write8(addr, res);
             Cpu::write_reg8(RegID::A, res);
@@ -1535,7 +1535,7 @@ impl InstTrait for Instruction {
             let val = Cpu::read_reg8(reg);
             let mut res = val << 1;
             if Cpu::is_flag_set(Flag::C) {
-              res = res & 0x01;
+              res = res | 0x01;
             }
             Cpu::write_reg8(reg, res);
             Cpu::update_flags_shift_left(val, res);
@@ -1579,7 +1579,7 @@ impl InstTrait for Instruction {
             let val = Memory::read8(addr);
             let mut res = val >> 1;
             if Cpu::is_flag_set(Flag::C) {
-              res = res & 0x80;
+              res = res | 0x80;
             }
             Memory::write8(addr, res);
             Cpu::write_reg8(RegID::A, res);
@@ -1589,7 +1589,7 @@ impl InstTrait for Instruction {
             let val = Cpu::read_reg8(reg);
             let mut res = val >> 1;
             if Cpu::is_flag_set(Flag::C) {
-              res = res & 0x80;
+              res = res | 0x80;
             }
             Cpu::write_reg8(reg, res);
             Cpu::update_flags_shift_left(val, res);
@@ -1633,7 +1633,7 @@ impl InstTrait for Instruction {
             let val = Memory::read8(addr);
             let mut res = val << 1;
             if val & 0x80 == 0x80 {
-              res = res & 0x01;
+              res = res | 0x01;
             }
             Memory::write8(addr, res);
             Cpu::write_reg8(RegID::A, res);
@@ -1643,7 +1643,7 @@ impl InstTrait for Instruction {
             let val = Cpu::read_reg8(reg);
             let mut res = val << 1;
             if val & 0x80 == 0x80 {
-              res = res & 0x01;
+              res = res | 0x01;
             }
             Cpu::write_reg8(reg, res);
             Cpu::update_flags_shift_left(val, res);
@@ -1687,7 +1687,7 @@ impl InstTrait for Instruction {
             let val = Memory::read8(addr);
             let mut res = val >> 1;
             if val & 0x01 == 0x01 {
-              res = res & 0x80;
+              res = res | 0x80;
             }
             Memory::write8(addr, res);
             Cpu::write_reg8(RegID::A, res);
@@ -1697,7 +1697,7 @@ impl InstTrait for Instruction {
             let val = Cpu::read_reg8(reg);
             let mut res = val >> 1;
             if val & 0x01 == 0x01 {
-              res = res & 0x80;
+              res = res | 0x80;
             }
             Cpu::write_reg8(reg, res);
             Cpu::update_flags_shift_left(val, res);
@@ -1883,8 +1883,7 @@ impl InstTrait for Instruction {
         }
         else if self.code == 0xE9 {
           // JP (HL)
-          let hl = Cpu::read_reg16(RegID::HL);
-          let dst_addr = Memory::read16(hl);
+          let dst_addr = Cpu::read_reg16(RegID::HL);
           Cpu::write_reg16(RegID::PC, dst_addr);
         }
         else if self.code & 0xC7 == 0xC2 {
@@ -2470,7 +2469,7 @@ impl InstTrait for Instruction {
       TableID::BIT => {
         if self.code & 0xC0 == 0x40 {
           let reg_map = [RegID::B, RegID::C, RegID::D, RegID::E, RegID::H, RegID::L, RegID::HL, RegID::A];
-          let r = self.code & 0x03;
+          let r = self.code & 0x07;
           let b = (self.code & 0x38) >> 3;
           let reg = reg_map[r as usize];
           if matches!(reg,RegID::HL) {
@@ -2553,7 +2552,7 @@ impl InstTrait for Instruction {
       TableID::BIT => {
         if self.code & 0xC0 == 0xC0 {
           let reg_map = [RegID::B, RegID::C, RegID::D, RegID::E, RegID::H, RegID::L, RegID::HL, RegID::A];
-          let r = self.code & 0x03;
+          let r = self.code & 0x07;
           let b = (self.code & 0x38) >> 3;
           let reg = reg_map[r as usize];
           if matches!(reg,RegID::HL) {
@@ -2581,7 +2580,9 @@ impl InstTrait for Instruction {
           let dst_addr = calc_address_with_offset(addr, self.data as u8);
           let mut val = Memory::read8(dst_addr);
           let b = (self.code & 0x38) >> 3;
+          println!("Set bit {} of {}", b, val);
           val = val | (0x01 << b);
+          println!("Giving {}", val);
           Memory::write8(dst_addr, val);
         }
         else {
@@ -2595,7 +2596,9 @@ impl InstTrait for Instruction {
           let dst_addr = calc_address_with_offset(addr, self.data as u8);
           let mut val = Memory::read8(dst_addr);
           let b = (self.code & 0x38) >> 3;
+          println!("Set bit {} of {}", b, val);
           val = val | (0x01 << b);
+          println!("Giving {}", val);
           Memory::write8(dst_addr, val);
         }
         else {
@@ -2612,7 +2615,7 @@ impl InstTrait for Instruction {
       TableID::BIT => {
         if self.code & 0xC0 == 0x80 {
           let reg_map = [RegID::B, RegID::C, RegID::D, RegID::E, RegID::H, RegID::L, RegID::HL, RegID::A];
-          let r = self.code & 0x03;
+          let r = self.code & 0x07;
           let b = (self.code & 0x38) >> 3;
           let reg = reg_map[r as usize];
           if matches!(reg,RegID::HL) {
@@ -2683,16 +2686,45 @@ impl InstTrait for Instruction {
     }
   }
 
-  fn otir(&self) {
-    report_unknown("OTIR");
-  }
-
-  fn otdr(&self) {
-    report_unknown("OTDR");
-  }
-
+  // IN Instruction
   fn _in(&self) {
-    report_unknown("IN");
+    match self.table {
+      TableID::MAIN => {
+        // IN A, (n)
+        if self.code == 0xDB {
+          let a = Cpu::read_reg8(RegID::A);
+          let n = self.data as u8;
+          println!("read port {:02X?}{:02X?}", a, n);
+          // ToDo: implement, for now write FF to register A
+          Cpu::write_reg8(RegID::A, 0x50);
+        }
+        else {
+          report_unknown("IN");
+        }
+      },
+      TableID::MISC => {
+        if self.code & 0xC7 == 0x40 {
+          let c = Cpu::read_reg8(RegID::C);
+          let r= (self.data & 0x38) >> 3;
+          let reg_map = [RegID::B, RegID::C, RegID::D, RegID::E, RegID::H, RegID::L, RegID::HL, RegID::A];
+          let reg = reg_map[r as usize];
+          if matches!(reg, RegID::HL) {
+            // undefined
+            println!("Undefined IN Register - flag");
+          }
+          else {
+            let val = Cpu::read_reg8(reg);
+            println!("read port {:02X?}{:02X?}", val, c);
+            // ToDo: implement, for now write FF to register A
+            Cpu::write_reg8(RegID::A, 0xFF);
+          }
+        }
+        else {
+          report_unknown("IN")
+        }
+      },
+      _ => report_unknown("IN")
+    }
   }
 
   fn indr(&self) {
@@ -2715,6 +2747,14 @@ impl InstTrait for Instruction {
     report_unknown("OUT");
   }
 
+  fn otir(&self) {
+    report_unknown("OTIR");
+  }
+
+  fn otdr(&self) {
+    report_unknown("OTDR");
+  }
+
   fn di(&self) {
     match self.table {
       TableID::MAIN => {
@@ -2733,6 +2773,7 @@ impl InstTrait for Instruction {
     match self.table {
       TableID::MAIN => {
         if self.code == 0xFB {
+          // ToDo: find out why this is breaking LDIR loops
           Cpu::enable_interrupts();
         }
         else {

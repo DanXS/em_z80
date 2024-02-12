@@ -360,11 +360,13 @@ fn main() {
         Err(error) => panic!("Problem reading the file: {:?}", error),
     };
     // Load a screenshot for testing display without running instuctions
+    /* 
     let screenshot_file_result = load_bin("./screenshots/Jetpack.scr", 0x4000);
     match screenshot_file_result {
         Ok(file) => file,
         Err(error) => panic!("Problem reading the file: {:?}", error),
     };
+    */
     set_cpu_frequency(3.5f32);
     let main_window = MainWindow::new().unwrap();
     build_memory_view(&main_window);
