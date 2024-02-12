@@ -3,7 +3,6 @@ extern crate em_z80_lib;
 extern crate spectrum_lib;
 
 use em_z80_lib::*;
-use glow::UniformLocation;
 use spectrum_lib::*;
 use std::env;
 use std::u16;
