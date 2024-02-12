@@ -3,6 +3,7 @@ extern crate em_z80_lib;
 extern crate spectrum_lib;
 
 use em_z80_lib::*;
+use glow::UniformLocation;
 use spectrum_lib::*;
 use std::env;
 use std::u16;
@@ -154,6 +155,7 @@ struct GLScreenView {
     program: glow::Program,
     vbo: glow::Buffer,
     vao: glow::VertexArray,
+    border_colour_location: glow::UniformLocation,
     displayed_texture: GLTextureFBO,
     next_texture: GLTextureFBO,
     src_texture: GLTextureFBO,
@@ -177,16 +179,14 @@ impl GLScreenView {
                 r#"#version 100
             precision mediump float;
             varying vec2 frag_position;
+            uniform vec4 border_colour;
             uniform sampler2D texture;
 
             void main() {
-                vec4 col = vec4(0.0, 0.0, 0.0, 1.0);
+                vec4 col = border_colour;
                 vec2 screen_pos = vec2(160.0*frag_position.x+128.0, (120.0*frag_position.y+96.0));
-                if ((screen_pos.x < 0.0 || screen_pos.x > 256.0) || 
-                    (screen_pos.y < 0.0 || screen_pos.y > 192.0)){
-                    col = vec4(0.0, 0.0, 0.0, 1.0);
-                }
-                else {
+                if ((screen_pos.x >= 0.0 && screen_pos.x <= 256.0) && 
+                    (screen_pos.y >= 0.0 && screen_pos.y <= 192.0)) {
                     vec2 coord = vec2(screen_pos.x/256.0, screen_pos.y/192.0);
                     col = texture2D(texture, coord);
                 }
@@ -261,18 +261,19 @@ impl GLScreenView {
 
             gl.active_texture(glow::TEXTURE0);
             gl.bind_texture(glow::TEXTURE_2D, Some(src_texture.texture));
-            //gl.active_texture(glow::TEXTURE1);
-            //gl.bind_texture(glow::TEXTURE_2D, Some(next_src_texture.texture));
-            
+
+            let border_colour_location = gl.get_uniform_location(program, "border_colour").unwrap();
+
             Self {
                 gl,
                 program,
                 vbo,
                 vao,
+                border_colour_location,
                 displayed_texture,
                 next_texture,
                 src_texture,
-                next_src_texture
+                next_src_texture,
             }
         }
     }
@@ -306,6 +307,14 @@ impl GLScreenView {
             // Display current texture
             gl.active_texture(glow::TEXTURE0);
             gl.bind_texture(glow::TEXTURE_2D, Some(self.src_texture.texture));    
+
+            // Set the border colour
+            gl.uniform_4_f32(
+                Some(&self.border_colour_location),
+                 0.81f32,
+                 0.81f32,
+                 0.81f32,
+                 1.0f32);
 
             // Retrieve the converted buffer from the ULA
             let ula_rgb_pixels = get_rgba_buffer();
