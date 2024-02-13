@@ -25,3 +25,12 @@ pub fn get_rgba_buffer() -> Box<[u8; SCREEN_SIZE_BYTES]> {
     return res;
   }
 }
+
+pub fn get_border_colour() -> Box<[f32;4]> {
+  unsafe {
+    let restore_state = critical_section::acquire();
+    let res = Ula::get_border_colour();
+    critical_section::release(restore_state);
+    return res;
+  }
+}

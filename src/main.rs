@@ -308,12 +308,13 @@ impl GLScreenView {
             gl.bind_texture(glow::TEXTURE_2D, Some(self.src_texture.texture));    
 
             // Set the border colour
+            let border_col = get_border_colour();
             gl.uniform_4_f32(
                 Some(&self.border_colour_location),
-                 0.81f32,
-                 0.81f32,
-                 0.81f32,
-                 1.0f32);
+                border_col[0],
+                border_col[1],
+                border_col[2],
+                border_col[3]);
 
             // Retrieve the converted buffer from the ULA
             let ula_rgb_pixels = get_rgba_buffer();
@@ -481,7 +482,7 @@ fn main() {
             _ => false,
         }
     });
-    //let weak_window = main_window.as_weak();
+    // Thread to manage vertical blanking gap interrupts from the ULA
     std::thread::spawn(move || {
         loop {
             // Wait for next vertical blanking gap
@@ -499,7 +500,6 @@ fn main() {
     });
     // Set up OpenGLES rendering for main display of emulated screen
     let mut screenview = None;
-
     let weak_window = main_window.as_weak();
     if let Err(error) = main_window.window().set_rendering_notifier(move |state, graphics_api| {
         match state {

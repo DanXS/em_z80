@@ -9,6 +9,8 @@ pub const SCREEN_SIZE_BYTES : usize = 4*SCREEN_WIDTH*SCREEN_HEIGHT;
 
 static mut OUTPUT_RGBA: [u8; SCREEN_SIZE_BYTES] = [0; SCREEN_SIZE_BYTES];
 
+static mut BORDER_COLOR: u32 = 0xCFCFCFFF;
+
 pub struct Ula;
 
 pub struct DataBus {
@@ -103,6 +105,18 @@ impl Ula {
     unsafe {
       let output_rgba = Box::new(OUTPUT_RGBA.clone());
       return output_rgba;
+    }
+  }
+
+  pub fn get_border_colour() -> Box<[f32;4]> {
+    unsafe {
+      let mut border_colour_floats = [0.0f32;4];
+      border_colour_floats[0] = (((BORDER_COLOR >> 24) & 0xFF) as f32) / 255.0f32;
+      border_colour_floats[1] = (((BORDER_COLOR >> 16) & 0xFF) as f32) / 255.0f32;
+      border_colour_floats[2] = (((BORDER_COLOR >> 8) & 0xFF) as f32) / 255.0f32;
+      border_colour_floats[3] = ((BORDER_COLOR & 0xFF) as f32) / 255.0f32;
+      let border_colour = Box::new(border_colour_floats.clone());
+      return border_colour;
     }
   }
   
