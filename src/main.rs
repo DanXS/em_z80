@@ -473,6 +473,19 @@ fn main() {
         update_breakpoints_enabled(!is_enabled);
         build_disassembly_view(&(weak_window.unwrap()));
     });
+    main_window.on_keyboard_key_pressed(move |text : SharedString, control : bool, meta: bool, shift : bool | {
+        let key = text.as_str();
+        // Meta and control or'ed together so either can mean symbol so works with command key on mac
+        // Note: some command keys may be mapped to menu, for example command h will hide window
+        // so better to use control keys (on mac), strangely is says meta is for command key, but seems to
+        // be control key on my mac?
+        key_down_event(key, shift, control || meta);
+    });
+    main_window.on_keyboard_key_released(move |text : SharedString, control : bool, meta: bool, shift : bool | {
+        let key = text.as_str();
+        // Meta and control or'ed together so either can mean symbol so works with command key on mac
+        key_up_event(key, shift,  control || meta);
+    });
     main_window.global::<Logic>().on_has_breakpoint(|line| {
         let line_str = line.as_str();
         match address_from_disassembly(line_str) {

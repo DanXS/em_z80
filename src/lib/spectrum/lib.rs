@@ -1,3 +1,4 @@
+mod keyboard;
 mod ula;
 
 use ula::DataBus;
@@ -33,4 +34,12 @@ pub fn get_border_colour() -> Box<[f32;4]> {
     critical_section::release(restore_state);
     return res;
   }
+}
+
+pub fn key_down_event(key: &str, shift : bool, sym : bool) {
+  Ula::key_down_event(key, shift, sym);
+}
+
+pub fn key_up_event(key: &str, shift : bool, sym : bool) {
+  Ula::key_up_event(key, shift, sym);
 }
