@@ -10,6 +10,8 @@ use std::rc::Rc;
 use std::num::NonZeroU32;
 use slint::{ SharedString, ModelRc, VecModel, RenderingState };
 use glow::HasContext;
+use std::sync::mpsc::{Sender, Receiver};
+use std::sync::mpsc;
 
 slint::include_modules!();
 
@@ -376,7 +378,13 @@ fn main() {
         Err(error) => panic!("Problem reading the file: {:?}", error),
     };
     */
-    set_cpu_frequency(3.5f32);
+    set_cpu_frequency(50.0f32);
+    // Thread to manage IN port requests
+    let (in_request_tx, in_request_rx) : (Sender<u16>, Receiver<u16>) = mpsc::channel();
+    let (in_response_tx, in_response_rx) : (Sender<u8>, Receiver<u8>) = mpsc::channel();
+    create_ula_out_port(in_request_rx, in_response_tx);
+    setup_cpu_in_port(in_request_tx, in_response_rx);
+        
     let main_window = MainWindow::new().unwrap();
     build_memory_view(&main_window);
     build_register_view(&main_window);

@@ -4,6 +4,7 @@ mod ula;
 use ula::DataBus;
 use ula::Ula;
 use ula::SCREEN_SIZE_BYTES;
+use std::sync::mpsc::{Sender, Receiver};
 
 pub fn next_vblank() -> u8 {
     let fut = Ula::next_vblank(&DataBus{value: 0x38});
@@ -42,4 +43,8 @@ pub fn key_down_event(key: &str, shift : bool, sym : bool) {
 
 pub fn key_up_event(key: &str, shift : bool, sym : bool) {
   Ula::key_up_event(key, shift, sym);
+}
+
+pub fn create_ula_out_port(request: Receiver<u16>, reply: Sender<u8>) {
+  Ula::create_ula_out_port(request, reply);
 }

@@ -8,6 +8,7 @@ mod opcodes;
 extern crate core;
 
 use std::io;
+use std::sync::mpsc::{Sender, Receiver};
 use registers::Flag;
 use registers::RegID;
 use crate::cpu::Cpu;
@@ -185,6 +186,10 @@ pub fn has_breakpoint(addr: u16) -> bool {
 // Enable or disable breakpoints
 pub fn update_breakpoints_enabled(enabled: bool) {
   Cpu::update_breakpoints_enabled(enabled)
+}
+
+pub fn setup_cpu_in_port(in_request_tx : Sender<u16>, in_response_rx : Receiver<u8>) {
+  Cpu::setup_cpu_in_port(in_request_tx, in_response_rx);
 }
 
 // Trigger an interrupt with a given value on the databus

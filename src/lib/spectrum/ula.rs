@@ -1,6 +1,6 @@
 
-use crate::keyboard::{self, Keyboard};
-use std::{sync::mpsc::channel, thread, time::Duration};
+use crate::keyboard::Keyboard;
+use std::{sync::mpsc::{channel, Sender, Receiver}, thread, time::Duration};
 
 const SCREEN_WIDTH : usize =256;
 const SCREEN_HEIGHT : usize = 192;
@@ -12,7 +12,6 @@ pub const SCREEN_SIZE_BYTES : usize = 4*SCREEN_WIDTH*SCREEN_HEIGHT;
 static mut OUTPUT_RGBA: [u8; SCREEN_SIZE_BYTES] = [0; SCREEN_SIZE_BYTES];
 
 static mut BORDER_COLOR: u32 = 0xCFCFCFFF;
-
 
 pub struct Ula;
 
@@ -124,8 +123,8 @@ impl Ula {
   }
 
   pub fn key_down_event(key: &str, shift : bool, sym : bool) {
-    println!("Key down {}", key);
-    println!("Shift {}, Sym {}", shift, sym);
+    //println!("Key down {}", key);
+    //println!("Shift {}, Sym {}", shift, sym);
     Keyboard::set_keyboard_key_state(key.to_ascii_uppercase().as_str());
     if shift {
       Keyboard::set_keyboard_key_state("Shift");
@@ -133,12 +132,12 @@ impl Ula {
     if sym {
       Keyboard::set_keyboard_key_state("Sym");
     }
-    println!("Keyboard state:\n{}", Keyboard);
+    //println!("Keyboard state:\n{}", Keyboard);
   }
 
   pub fn key_up_event(key: &str, shift : bool, sym : bool) {
-    println!("Key up {}", key);
-    println!("Shift {}, Sym {}", shift, sym);
+    //println!("Key up {}", key);
+    //println!("Shift {}, Sym {}", shift, sym);
     Keyboard::clear_keyboard_key_state(key.to_ascii_uppercase().as_str());
     if !shift {
       Keyboard::clear_keyboard_key_state("Shift");
@@ -146,7 +145,23 @@ impl Ula {
     if !sym {
       Keyboard::clear_keyboard_key_state("Sym");
     }
-    println!("Keyboard state:\n{}", Keyboard);
+    //println!("Keyboard state:\n{}", Keyboard);
   }
-  
+
+
+  pub fn create_ula_out_port(request: Receiver<u16>, reply: Sender<u8>) {
+    thread::spawn(move || {
+      loop {
+        let result = request.try_recv();
+        match result {
+          Ok(addr) => {
+            let data = Keyboard::read_port(addr);
+            let _ = reply.send(data);
+          },
+          Err(_) => {}
+        }
+      }
+    });
+  }
+
 }

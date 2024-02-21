@@ -2,6 +2,7 @@
 use std::cmp::max;
 use std::thread;
 use core::time::Duration;
+use std::sync::mpsc::{Sender, Receiver};
 use std::time::Instant;
 use crate::util::*;
 use crate::instructions::Instruction;
@@ -37,6 +38,16 @@ pub enum InterruptMode {
   Two
 }
 
+struct Ports {
+  in_request_tx : Option<Sender<u16>>,
+  in_response_rx : Option<Receiver<u8>>
+}
+
+static mut PORTS : Ports = Ports {
+  in_request_tx : None,
+  in_response_rx : None
+};
+
 struct CpuState {
   pub cycle_time: u64,
   pub active_cycles: u8,
@@ -62,7 +73,7 @@ static mut CPU_STATE : CpuState = CpuState {
   interrupt_iff1: false,
   interrupt_iff2: false,
   is_cpu_halted: false,
-  interrupt_triggered: false
+  interrupt_triggered: false,
 };
 
 pub struct Cpu;
@@ -263,6 +274,45 @@ impl Cpu {
 
   pub fn get_register_from_str(reg_str: &str) -> RegID {
     Register::from_str(reg_str)
+  }
+
+  pub fn setup_cpu_in_port(in_request_tx : Sender<u16>, in_response_rx : Receiver<u8>) {
+    unsafe {
+      PORTS.in_request_tx = Some(in_request_tx);
+      PORTS.in_response_rx = Some(in_response_rx);
+    }
+  }
+
+  pub fn read_port(port_addr : u16) -> u8 {
+    unsafe {
+      if PORTS.in_request_tx.is_some() && PORTS.in_response_rx.is_some() {
+        let sender = &PORTS.in_request_tx;
+        let receiver = &PORTS.in_response_rx;
+        let request = sender.as_ref().unwrap().send(port_addr);
+        match request {
+          Ok(_) => {
+            let response = receiver.as_ref().unwrap().recv();
+            match response {
+              Ok(val) => {
+                //println!("Read value {:02X?}, from port {:04X?}", val, port_addr);
+                return val;
+              },
+              Err(err) => {
+                println!("Error reading port {} {}", port_addr, err);
+                return 0xFF;
+              }
+            }
+          },
+          Err(err) => {
+            println!("Error sending request to port {}, {}", port_addr, err);
+            return 0xFF;
+          }
+        }
+      }
+      else {
+        return 0xFF;
+      }
+    }
   }
 
   pub fn set_cpu_frequency(mhz: f32) {
@@ -497,7 +547,7 @@ impl Cpu {
     // Simulate the time it takes for the instruciton to run
     let delay_ns = Self::get_cycle_time()*(Self::get_acitve_cycles() as u64);
     let sleep_time_ns = max(0, (delay_ns as i64) - (elapsed as i64));
-    //thread::sleep(Duration::from_nanos(sleep_time_ns as u64));
+    thread::sleep(Duration::from_nanos(sleep_time_ns as u64));
   }
 
   fn run_inst(f: fn(&Instruction), opcode: &Opcode, data: [u8;2], len: usize) {
@@ -514,12 +564,6 @@ impl Cpu {
   pub fn run() {
     unsafe { CPU_STATE.is_running = true };
     while unsafe { CPU_STATE.is_running } {
-      unsafe {
-        if CPU_STATE.is_cpu_halted {
-          continue;
-        }
-      }
-      Self::step();
       if unsafe { CPU_STATE.breakpoints_enabled } {
         if unsafe { CPU_STATE.breakpoints.contains(&Self::get_pc()) } {
           println!("Hit breakpoint at: {:04X?}", &Self::get_pc());
@@ -528,14 +572,14 @@ impl Cpu {
       }
       unsafe {
         // Handle interrupts
-        if  CPU_STATE.interrupt_triggered {
+        if CPU_STATE.interrupt_triggered {
           match CPU_STATE.interrupt_mode {
             InterruptMode::One => {
               let isr_addr = CPU_STATE.databus_val as u16;
               // Save the program counter to the stack
               Self::push_pc();
               Self::set_pc(isr_addr);
-              println!("Servicing Interrupt in Mode One");
+              //println!("Servicing Interrupt in Mode One");
               CPU_STATE.is_cpu_halted = false;
               CPU_STATE.interrupt_iff1 = false;
               CPU_STATE.interrupt_triggered = false;
@@ -544,6 +588,12 @@ impl Cpu {
           }
         }
       }
+      unsafe {
+        if CPU_STATE.is_cpu_halted {
+          continue;
+        }
+      }
+      Self::step();
     }
     unsafe { CPU_STATE.is_running = false };
   }

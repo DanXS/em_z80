@@ -254,6 +254,7 @@ impl InstTrait for Instruction {
             Cpu::clear_flag(Flag::H);
             Cpu::clear_flag(Flag::N);
             // ToDo: set status flags based on interrupt flags
+            println!("LD A,I incomplete!");
           }
           else if self.code == 0x4F {
             // LD R,A
@@ -267,6 +268,7 @@ impl InstTrait for Instruction {
             Cpu::clear_flag(Flag::H);
             Cpu::clear_flag(Flag::N);
             // ToDo: set status flags based on interrupt flags
+            println!("LD A,R incomplete!");
           }
           else {
             report_unknown("LD");
@@ -1548,6 +1550,7 @@ impl InstTrait for Instruction {
       TableID::IXBIT => {
         if self.len==1 && self.code == 0x16 {
           // Todo handle ixbit operations
+          report_unknown("RL");
         }
         else {
           report_unknown("RL");
@@ -1556,6 +1559,7 @@ impl InstTrait for Instruction {
       TableID::IYBIT => {
         if self.len==1 && self.code == 0x16 {
           // Todo handle iybit operations
+          report_unknown("RL");
         }
         else {
           report_unknown("RL");
@@ -1602,6 +1606,7 @@ impl InstTrait for Instruction {
       TableID::IXBIT => {
         if self.len==1 && self.code == 0x1E {
           // Todo handle ixbit operations
+          report_unknown("RR");
         }
         else {
           report_unknown("RR");
@@ -1610,6 +1615,7 @@ impl InstTrait for Instruction {
       TableID::IYBIT => {
         if self.len==1 && self.code == 0x1E {
           // Todo handle iybit operations
+          report_unknown("RR");
         }
         else {
           report_unknown("RR");
@@ -1656,6 +1662,7 @@ impl InstTrait for Instruction {
       TableID::IXBIT => {
         if self.len==1 && self.code == 0x06 {
           // Todo handle ixbit operations
+          report_unknown("RLC");
         }
         else {
           report_unknown("RLC");
@@ -1664,6 +1671,7 @@ impl InstTrait for Instruction {
       TableID::IYBIT => {
         if self.len==1 && self.code == 0x06 {
           // Todo handle iybit operations
+          report_unknown("RLC");
         }
         else {
           report_unknown("RLC");
@@ -1710,6 +1718,7 @@ impl InstTrait for Instruction {
       TableID::IXBIT => {
         if self.len==1 && self.code == 0x0E {
           // Todo handle ixbit operations
+          report_unknown("RRC");
         }
         else {
           report_unknown("RRC");
@@ -1718,6 +1727,7 @@ impl InstTrait for Instruction {
       TableID::IYBIT => {
         if self.len==1 && self.code == 0x0E {
           // Todo handle iybit operations
+          report_unknown("RRC");
         }
         else {
           report_unknown("RRC");
@@ -1758,6 +1768,7 @@ impl InstTrait for Instruction {
       TableID::IXBIT => {
         if self.len==1 && self.code == 0x2E {
           // Todo handle ixbit operations
+          report_unknown("SLA");
         }
         else {
           report_unknown("SLA");
@@ -1766,6 +1777,7 @@ impl InstTrait for Instruction {
       TableID::IYBIT => {
         if self.len==1 && self.code == 0x2E {
           // Todo handle iybit operations
+          report_unknown("SLA");
         }
         else {
           report_unknown("SLA");
@@ -1806,6 +1818,7 @@ impl InstTrait for Instruction {
       TableID::IXBIT => {
         if self.len==1 && self.code == 0x2E {
           // Todo handle ixbit operations
+          report_unknown("SRA");
         }
         else {
           report_unknown("SRA");
@@ -1814,6 +1827,7 @@ impl InstTrait for Instruction {
       TableID::IYBIT => {
         if self.len==1 && self.code == 0x2E {
           // Todo handle iybit operations
+          report_unknown("SRA");
         }
         else {
           report_unknown("SRA");
@@ -1855,6 +1869,7 @@ impl InstTrait for Instruction {
       TableID::IXBIT => {
         if self.len==1 && self.code == 0x3E {
           // Todo handle ixbit operations
+          report_unknown("SRL");
         }
         else {
           report_unknown("SRL");
@@ -1863,6 +1878,7 @@ impl InstTrait for Instruction {
       TableID::IYBIT => {
         if self.len==1 && self.code == 0x3E {
           // Todo handle iybit operations
+          report_unknown("SRL");
         }
         else {
           report_unknown("SRL");
@@ -1905,8 +1921,7 @@ impl InstTrait for Instruction {
       TableID::IX => {
         if self.code == 0xE9 {
           // JP (IX)
-          let hl = Cpu::read_reg16(RegID::IX);
-          let dst_addr = Memory::read16(hl);
+          let dst_addr = Cpu::read_reg16(RegID::IX);
           Cpu::write_reg16(RegID::PC, dst_addr);
           Cpu::set_acitve_cycles(self.cycles.0);
         }
@@ -1917,8 +1932,7 @@ impl InstTrait for Instruction {
       TableID::IY => {
         if self.code == 0xE9 {
           // JP (IY)
-          let hl = Cpu::read_reg16(RegID::IY);
-          let dst_addr = Memory::read16(hl);
+          let dst_addr = Cpu::read_reg16(RegID::IY);
           Cpu::write_reg16(RegID::PC, dst_addr);
           Cpu::set_acitve_cycles(self.cycles.0);
         }
@@ -2580,9 +2594,7 @@ impl InstTrait for Instruction {
           let dst_addr = calc_address_with_offset(addr, self.data as u8);
           let mut val = Memory::read8(dst_addr);
           let b = (self.code & 0x38) >> 3;
-          println!("Set bit {} of {}", b, val);
           val = val | (0x01 << b);
-          println!("Giving {}", val);
           Memory::write8(dst_addr, val);
         }
         else {
@@ -2596,9 +2608,7 @@ impl InstTrait for Instruction {
           let dst_addr = calc_address_with_offset(addr, self.data as u8);
           let mut val = Memory::read8(dst_addr);
           let b = (self.code & 0x38) >> 3;
-          println!("Set bit {} of {}", b, val);
           val = val | (0x01 << b);
-          println!("Giving {}", val);
           Memory::write8(dst_addr, val);
         }
         else {
@@ -2694,9 +2704,9 @@ impl InstTrait for Instruction {
         if self.code == 0xDB {
           let a = Cpu::read_reg8(RegID::A);
           let n = self.data as u8;
-          println!("read port {:02X?}{:02X?}", a, n);
-          // ToDo: implement, for now write FF to register A
-          Cpu::write_reg8(RegID::A, 0x50);
+          let port_addr : u16 = (((a as u16) << 8) & 0xFF00) | (n as u16 & 0x00FF);
+          let data = Cpu::read_port(port_addr);
+          Cpu::write_reg8(RegID::A, data);
         }
         else {
           report_unknown("IN");
@@ -2714,9 +2724,9 @@ impl InstTrait for Instruction {
           }
           else {
             let val = Cpu::read_reg8(reg);
-            println!("read port {:02X?}{:02X?}", val, c);
-            // ToDo: implement, for now write FF to register A
-            Cpu::write_reg8(RegID::A, 0xFF);
+            let port_addr : u16 = (((val as u16) << 8) & 0xFF00) | (c as u16 & 0x00FF);
+            let data = Cpu::read_port(port_addr);
+            Cpu::write_reg8(RegID::A, data);
           }
         }
         else {
@@ -2759,6 +2769,7 @@ impl InstTrait for Instruction {
     match self.table {
       TableID::MAIN => {
         if self.code == 0xF3 {
+          //println!("disable interrupts called");
           Cpu::disable_interrupts();
         }
         else {
@@ -2773,7 +2784,7 @@ impl InstTrait for Instruction {
     match self.table {
       TableID::MAIN => {
         if self.code == 0xFB {
-          // ToDo: find out why this is breaking LDIR loops
+          //println!("enable interrupts called");
           Cpu::enable_interrupts();
         }
         else {
@@ -2788,6 +2799,7 @@ impl InstTrait for Instruction {
     match self.table {
       TableID::MAIN => {
         if self.code == 0x76 {
+          //println!("halt called");
           Cpu::halt_until_interrupt();
         }
         else {
@@ -2803,14 +2815,17 @@ impl InstTrait for Instruction {
       TableID::MISC => {
         if self.code == 0x46 {
           // IM 0
+          //println!("interrupt mode zero");
           Cpu::set_interrupt_mode(InterruptMode::Zero);
         }
         else if self.code == 0x56 {
           // IM 1
+          //println!("interrupt mode one");
           Cpu::set_interrupt_mode(InterruptMode::One);
         }
         else if self.code == 0x5E {
           // IM 2
+          //println!("interrupt mode two");
           Cpu::set_interrupt_mode(InterruptMode::Two);
         }
         else {

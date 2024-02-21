@@ -44,7 +44,8 @@ pub fn get_parity(val: u8) -> bool {
 
 #[inline]
 pub fn report_unknown(opcode_str: &str) {
-  println!("Unknown {} instruction!", opcode_str);
+  // commented out for now to reduce noise in console
+  //println!("Unknown {} instruction!", opcode_str);
 }
 
 #[inline]
